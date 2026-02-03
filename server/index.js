@@ -86,8 +86,8 @@ io.on('connection', (socket) => {
     const game = games.get(playerData.roomId);
     if (!game || game.getHostId() !== playerData.playerId) return;
 
-    if (game.getPlayers().length < 3) {
-      socket.emit('error', { message: 'Need at least 3 players to start' });
+    if (game.getPlayers().length < 2) {
+      socket.emit('error', { message: 'Need at least 2 players to start' });
       return;
     }
 
@@ -183,6 +183,24 @@ io.on('connection', (socket) => {
     if (!game) return;
 
     const result = game.chooseCard(playerData.playerId, cardIndex);
+    // Send personalized state to each player
+    game.getPlayers().forEach((player) => {
+      io.to(player.socketId).emit('game-state', game.getPublicState(player.id));
+    });
+
+    if (result.error) {
+      socket.emit('error', { message: result.error });
+    }
+  });
+
+  socket.on('ambassador-choose', ({ selectedIndices }) => {
+    const playerData = players.get(socket.id);
+    if (!playerData) return;
+
+    const game = games.get(playerData.roomId);
+    if (!game) return;
+
+    const result = game.chooseAmbassador(playerData.playerId, selectedIndices);
     // Send personalized state to each player
     game.getPlayers().forEach((player) => {
       io.to(player.socketId).emit('game-state', game.getPublicState(player.id));

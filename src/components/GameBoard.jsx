@@ -1,26 +1,121 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import ActionPanel from './ActionPanel';
 import Card from './Card';
 import './GameBoard.css';
 import PlayerArea from './PlayerArea';
 
+function AmbassadorExchange({ currentCards, drawnCards, keepCount, onConfirm }) {
+  const [selected, setSelected] = useState([]);
+
+  useEffect(() => {
+    setSelected([]);
+  }, [currentCards, drawnCards, keepCount]);
+
+  const options = [...(currentCards || []), ...(drawnCards || [])];
+  const currentCount = currentCards ? currentCards.length : 0;
+
+  const toggleSelection = (index) => {
+    setSelected((prev) => {
+      if (prev.includes(index)) {
+        return prev.filter((item) => item !== index);
+      }
+      if (prev.length >= keepCount) {
+        return prev;
+      }
+      return [...prev, index];
+    });
+  };
+
+  return (
+    <div className='ambassador-modal'>
+      <div className='ambassador-panel'>
+        <h3>Ambassador Exchange</h3>
+        <p>Select {keepCount} card{keepCount === 1 ? '' : 's'} to keep.</p>
+        <div className='ambassador-section'>
+          <h4>Your Cards</h4>
+          <div className='ambassador-options'>
+            {options.slice(0, currentCount).map((character, index) => (
+              <Card
+                key={`current-${character}-${index}`}
+                character={character}
+                revealed
+                selected={selected.includes(index)}
+                onClick={() => toggleSelection(index)}
+              />
+            ))}
+          </div>
+        </div>
+        <div className='ambassador-section'>
+          <h4>Deck Cards</h4>
+          <div className='ambassador-options'>
+            {options.slice(currentCount).map((character, offset) => {
+              const index = currentCount + offset;
+              return (
+                <Card
+                  key={`drawn-${character}-${index}`}
+                  character={character}
+                  revealed
+                  selected={selected.includes(index)}
+                  onClick={() => toggleSelection(index)}
+                />
+              );
+            })}
+          </div>
+        </div>
+        <button
+          className='choose-card-button'
+          onClick={() => onConfirm(selected)}
+          disabled={selected.length !== keepCount}
+        >
+          Confirm Exchange
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function GameBoard({ gameState, playerId, playerName, socket }) {
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [selectedCard, setSelectedCard] = useState(null);
+  const [statusMessage, setStatusMessage] = useState(null);
+  const [statusKind, setStatusKind] = useState('info');
+  const [responseLocked, setResponseLocked] = useState(false);
+  const lastLogIdRef = useRef(null);
+  const messageTimerRef = useRef(null);
 
   const currentPlayer = gameState.players.find(
     (p) => p.id === gameState.currentPlayerIndex
   );
   const myPlayer = gameState.players.find((p) => p.id === playerId);
   const isMyTurn = currentPlayer?.id === playerId;
-  const canChallenge = gameState.phase === 'challenge-pending' && !isMyTurn;
-  const canBlock = gameState.phase === 'block-pending' && !isMyTurn;
+  const challengedPlayerId =
+    gameState.pendingAction?.blockerId ?? gameState.pendingAction?.playerId ?? null;
+  const canChallenge =
+    gameState.phase === 'challenge-pending' &&
+    challengedPlayerId !== null &&
+    playerId !== challengedPlayerId &&
+    !myPlayer?.eliminated;
+  const canBlock = (() => {
+    if (gameState.phase !== 'block-pending' || !gameState.pendingAction) {
+      return false;
+    }
+    if (myPlayer?.eliminated) return false;
+    const action = gameState.pendingAction;
+    if (action.type === 'foreign-aid') {
+      return playerId !== action.playerId;
+    }
+    if (action.type === 'assassin' || action.type === 'captain') {
+      return playerId === action.targetId;
+    }
+    return false;
+  })();
   // Only the player who must lose a card should choose which one to reveal
   const mustChooseCardPlayerId = (() => {
     if (gameState.phase !== 'choose-card' || !gameState.pendingAction)
       return null;
     const pa = gameState.pendingAction;
+    if (pa.challengeStage === 'reveal') return pa.challengedPlayerId;
     if (pa.challengeResult === 'failed') return pa.challengerId; // challenger was wrong → challenger loses
     if (pa.challengeResult === 'success') return pa.challengedPlayerId; // challenged was wrong → they lose
     if (pa.type === 'coup' || pa.type === 'assassination') return pa.targetId; // target of attack loses
@@ -28,9 +123,54 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
   })();
   const needsCardChoice = mustChooseCardPlayerId === playerId;
 
+  const responseKey = `${gameState.phase}:${gameState.pendingAction?.type ?? ''}:${gameState.pendingAction?.playerId ?? ''}:${gameState.pendingAction?.blockerId ?? ''}:${gameState.pendingAction?.targetId ?? ''}`;
+
+  useEffect(() => {
+    setResponseLocked(false);
+  }, [responseKey]);
+
+  const pushMessage = (message, kind = 'info') => {
+    setStatusMessage(message);
+    setStatusKind(kind);
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+    }
+    messageTimerRef.current = setTimeout(() => {
+      setStatusMessage(null);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    const logs = gameState?.logs;
+    if (!logs || logs.length === 0) return;
+    const latest = logs[logs.length - 1];
+    if (!latest) return;
+    const lastSeenId = lastLogIdRef.current ?? 0;
+    if (latest.id === lastSeenId) return;
+
+    const relevant = [...logs]
+      .reverse()
+      .find(
+        (entry) =>
+          entry.id > lastSeenId &&
+          entry.players?.includes(playerId) &&
+          entry.outcome === 'lost' &&
+          (entry.kind === 'challenge' || entry.kind === 'block')
+      );
+
+    lastLogIdRef.current = latest.id;
+
+    if (relevant) {
+      pushMessage(relevant.message, 'danger');
+    }
+  }, [gameState?.logs, playerId]);
+
   const handleAction = (action, character = null) => {
     if (action === 'coup' || action === 'assassin' || action === 'captain') {
       if (!selectedTarget && selectedTarget !== 0) {
+        return;
+      }
+      if (selectedTarget === playerId) {
         return;
       }
     }
@@ -39,6 +179,7 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
   };
 
   const handleChallenge = () => {
+    if (responseLocked) return;
     if (!gameState.pendingAction) return;
     let targetId, character;
     if (gameState.pendingAction.blockerId) {
@@ -50,16 +191,24 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
       targetId = gameState.pendingAction.playerId;
       character = gameState.pendingAction.character;
     }
+    setResponseLocked(true);
+    pushMessage('Challenge submitted.', 'info');
     socket.emit('challenge', { targetId, character });
   };
 
   const handleBlock = (character) => {
+    if (responseLocked) return;
     if (!gameState.pendingAction) return;
     const targetId = gameState.pendingAction.playerId;
+    setResponseLocked(true);
+    pushMessage('Block submitted.', 'info');
     socket.emit('block', { targetId, character });
   };
 
   const handlePass = () => {
+    if (responseLocked) return;
+    setResponseLocked(true);
+    pushMessage('Pass submitted.', 'info');
     socket.emit('pass');
   };
 
@@ -98,7 +247,12 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
             isCurrentPlayer={player.id === gameState.currentPlayerIndex}
             isMe={player.id === playerId}
             onSelect={() => {
-              if (isMyTurn && gameState.phase === 'playing') {
+              if (
+                isMyTurn &&
+                gameState.phase === 'playing' &&
+                player.id !== playerId &&
+                !player.eliminated
+              ) {
                 setSelectedTarget(player.id);
               }
             }}
@@ -111,6 +265,13 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
       {myPlayer && (
         <div className='my-hand'>
           <h3>Your Cards</h3>
+          {needsCardChoice && gameState.pendingAction?.challengeStage === 'reveal' && (
+            <p className='challenge-reveal-hint'>
+              You were challenged to show{' '}
+              <strong>{gameState.pendingAction?.challengedCharacter}</strong>. Select a
+              card to reveal.
+            </p>
+          )}
           <div className='cards-container'>
             {myPlayer.cards.map((card, index) => (
               <Card
@@ -140,6 +301,150 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
               Choose This Card
             </button>
           )}
+
+          {statusMessage && (
+            <div className={`status-banner ${statusKind}`}>{statusMessage}</div>
+          )}
+
+          {canChallenge && (
+            <div className='challenge-panel'>
+              {gameState.pendingAction?.blockerId ? (
+                <>
+                  <h3>
+                    Challenge{' '}
+                    {
+                      gameState.players.find(
+                        (p) => p.id === gameState.pendingAction?.blockerId
+                      )?.name
+                    }
+                    's block?
+                  </h3>
+                  <p>
+                    They claimed to have:{' '}
+                    <strong>{gameState.pendingAction?.blockCharacter}</strong>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3>
+                    Challenge{' '}
+                    {
+                      gameState.players.find(
+                        (p) => p.id === gameState.pendingAction?.playerId
+                      )?.name
+                    }
+                    ?
+                  </h3>
+                  <p>
+                    They claimed to have:{' '}
+                    <strong>{gameState.pendingAction?.character}</strong>
+                  </p>
+                </>
+              )}
+              <button
+                className='challenge-button'
+                onClick={handleChallenge}
+                disabled={responseLocked}
+              >
+                Challenge
+              </button>
+              <button
+                className='pass-button'
+                onClick={handlePass}
+                disabled={responseLocked}
+              >
+                Pass
+              </button>
+            </div>
+          )}
+
+          {canBlock && gameState.pendingAction?.type === 'foreign-aid' && (
+            <div className='block-panel'>
+              <h3>Block Foreign Aid?</h3>
+              <p>
+                {
+                  gameState.players.find(
+                    (p) => p.id === gameState.pendingAction?.playerId
+                  )?.name
+                }{' '}
+                is taking Foreign Aid
+              </p>
+              <button
+                className='block-button'
+                onClick={() => handleBlock('Duke')}
+                disabled={responseLocked}
+              >
+                Block with Duke
+              </button>
+              <button
+                className='pass-button'
+                onClick={handlePass}
+                disabled={responseLocked}
+              >
+                Pass
+              </button>
+            </div>
+          )}
+
+          {canBlock && gameState.pendingAction?.type === 'assassin' && (
+            <div className='block-panel'>
+              <h3>Block Assassination?</h3>
+              <p>
+                {
+                  gameState.players.find(
+                    (p) => p.id === gameState.pendingAction?.targetId
+                  )?.name
+                }{' '}
+                is being assassinated
+              </p>
+              {gameState.pendingAction?.targetId === playerId && (
+                <button
+                  className='block-button'
+                  onClick={() => handleBlock('Contessa')}
+                  disabled={responseLocked}
+                >
+                  Block with Contessa
+                </button>
+              )}
+              <button
+                className='pass-button'
+                onClick={handlePass}
+                disabled={responseLocked}
+              >
+                Pass
+              </button>
+            </div>
+          )}
+
+          {canBlock && gameState.pendingAction?.type === 'captain' && (
+            <div className='block-panel'>
+              <h3>Block Steal?</h3>
+              <p>
+                {
+                  gameState.players.find(
+                    (p) => p.id === gameState.pendingAction?.targetId
+                  )?.name
+                }{' '}
+                is being stolen from
+              </p>
+              {gameState.pendingAction?.targetId === playerId && (
+                <button
+                  className='block-button'
+                  onClick={() => handleBlock('Captain')}
+                  disabled={responseLocked}
+                >
+                  Block with Captain
+                </button>
+              )}
+              <button
+                className='pass-button'
+                onClick={handlePass}
+                disabled={responseLocked}
+              >
+                Pass
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -147,136 +452,67 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
         {isMyTurn && gameState.phase === 'playing' && (
           <ActionPanel
             player={myPlayer}
-            otherPlayers={gameState.players.filter(
-              (p) => p.id !== playerId && !p.eliminated
-            )}
             onAction={handleAction}
             selectedTarget={selectedTarget}
           />
         )}
 
-        {canChallenge && (
-          <div className='challenge-panel'>
-            {gameState.pendingAction?.blockerId ? (
-              <>
-                <h3>
-                  Challenge{' '}
-                  {
-                    gameState.players.find(
-                      (p) => p.id === gameState.pendingAction?.blockerId
-                    )?.name
-                  }
-                  's block?
-                </h3>
-                <p>
-                  They claimed to have:{' '}
-                  <strong>{gameState.pendingAction?.blockCharacter}</strong>
-                </p>
-              </>
-            ) : (
-              <>
-                <h3>
-                  Challenge{' '}
-                  {
-                    gameState.players.find(
-                      (p) => p.id === gameState.pendingAction?.playerId
-                    )?.name
-                  }
-                  ?
-                </h3>
-                <p>
-                  They claimed to have:{' '}
-                  <strong>{gameState.pendingAction?.character}</strong>
-                </p>
-              </>
-            )}
-            <button className='challenge-button' onClick={handleChallenge}>
-              Challenge
-            </button>
-            <button className='pass-button' onClick={handlePass}>
-              Pass
-            </button>
-          </div>
-        )}
+        {gameState.phase === 'ambassador-exchange' &&
+          gameState.pendingAction?.playerId === playerId && (
+            <AmbassadorExchange
+              currentCards={gameState.pendingAction.currentCards || []}
+              drawnCards={gameState.pendingAction.drawnCards || []}
+              keepCount={gameState.pendingAction.keepCount || 0}
+              onConfirm={(selected) =>
+                socket.emit('ambassador-choose', { selectedIndices: selected })
+              }
+            />
+          )}
 
-        {canBlock && gameState.pendingAction?.type === 'foreign-aid' && (
-          <div className='block-panel'>
-            <h3>Block Foreign Aid?</h3>
-            <p>
-              {
-                gameState.players.find(
-                  (p) => p.id === gameState.pendingAction?.playerId
-                )?.name
-              }{' '}
-              is taking Foreign Aid
-            </p>
-            <button
-              className='block-button'
-              onClick={() => handleBlock('Duke')}
-            >
-              Block with Duke
-            </button>
-            <button className='pass-button' onClick={handlePass}>
-              Pass
-            </button>
-          </div>
-        )}
-
-        {canBlock && gameState.pendingAction?.type === 'assassin' && (
-          <div className='block-panel'>
-            <h3>Block Assassination?</h3>
-            <p>
-              {
-                gameState.players.find(
-                  (p) => p.id === gameState.pendingAction?.targetId
-                )?.name
-              }{' '}
-              is being assassinated
-            </p>
-            {gameState.pendingAction?.targetId === playerId && (
-              <button
-                className='block-button'
-                onClick={() => handleBlock('Contessa')}
-              >
-                Block with Contessa
-              </button>
-            )}
-            <button className='pass-button' onClick={handlePass}>
-              Pass
-            </button>
-          </div>
-        )}
-
-        {canBlock && gameState.pendingAction?.type === 'captain' && (
-          <div className='block-panel'>
-            <h3>Block Steal?</h3>
-            <p>
-              {
-                gameState.players.find(
-                  (p) => p.id === gameState.pendingAction?.targetId
-                )?.name
-              }{' '}
-              is being stolen from
-            </p>
-            {gameState.pendingAction?.targetId === playerId && (
-              <button
-                className='block-button'
-                onClick={() => handleBlock('Captain')}
-              >
-                Block with Captain
-              </button>
-            )}
-            <button className='pass-button' onClick={handlePass}>
-              Pass
-            </button>
-          </div>
-        )}
+        {gameState.phase === 'ambassador-exchange' &&
+          gameState.pendingAction?.playerId !== playerId && (
+            <div className='wait-turn'>
+              <p>
+                Waiting for{' '}
+                {
+                  gameState.players.find(
+                    (p) => p.id === gameState.pendingAction?.playerId
+                  )?.name
+                }{' '}
+                to exchange cards...
+              </p>
+            </div>
+          )}
 
         {!isMyTurn && gameState.phase === 'playing' && (
           <div className='wait-turn'>
             <p>Waiting for {currentPlayer?.name}'s turn...</p>
           </div>
         )}
+
+        <div className='game-log'>
+          <h3>Game Log</h3>
+          {(gameState.logs || []).length > 0 ? (
+            <div className='log-entries'>
+              {(gameState.logs || []).slice(-8).map((entry) => {
+                const isMine = entry.players?.includes(playerId);
+                const isLoss = entry.outcome === 'lost';
+                return (
+                  <div
+                    key={entry.id}
+                    className={`log-entry ${isMine ? 'mine' : ''} ${
+                      isLoss ? 'loss' : ''
+                    }`}
+                  >
+                    {entry.message}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className='log-empty'>No activity yet.</p>
+          )}
+        </div>
       </div>
     </div>
   );

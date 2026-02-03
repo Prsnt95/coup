@@ -1,6 +1,6 @@
 import './ActionPanel.css';
 
-function ActionPanel({ player, otherPlayers, onAction, selectedTarget }) {
+function ActionPanel({ player, onAction, selectedTarget }) {
   const mustCoup = player.coins >= 10;
 
   return (
@@ -72,21 +72,6 @@ function ActionPanel({ player, otherPlayers, onAction, selectedTarget }) {
         </div>
       </div>
 
-      {otherPlayers.length > 0 && (
-        <div className="target-selection">
-          <h4>Select Target:</h4>
-          <div className="targets-list">
-            {otherPlayers.map((p) => (
-              <div
-                key={p.id}
-                className={`target-item ${selectedTarget === p.id ? 'selected' : ''}`}
-              >
-                {p.name} ({p.coins} coins, {p.cardCount} cards)
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
