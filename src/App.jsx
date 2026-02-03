@@ -4,7 +4,11 @@ import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
 import './App.css';
 
-const socket = io('http://localhost:3001');
+// In dev (Vite on :3000), backend is on :3001. In production, same origin.
+const socketUrl =
+  import.meta.env.VITE_SOCKET_URL ||
+  (window.location.port === '3000' ? 'http://localhost:3001' : window.location.origin);
+const socket = io(socketUrl);
 
 function App() {
   const [gameState, setGameState] = useState(null);
