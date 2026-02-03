@@ -67,7 +67,7 @@ export class Game {
   }
 
   start() {
-    if (this.players.length < 3) return false;
+    if (this.players.length < 2) return false;
     this.phase = 'playing';
     this.currentPlayerIndex = 0;
     return true;
