@@ -114,38 +114,28 @@
   justify-content: center;
 }
 
-.card-slot {
+.player-area .card {
   width: 50px;
   height: 70px;
-  background: var(--bg-light);
-  border: 2px solid var(--primary);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  transition: all 0.3s ease;
+  cursor: default;
 }
 
-.card-slot:hover {
-  transform: scale(1.1);
+.player-area .card:hover {
+  transform: none;
+  box-shadow: none;
 }
 
-.card-back {
-  color: var(--primary);
+.player-area .card .card-content {
+  border-width: 2px;
+}
+
+.player-area .card .card-back {
   font-size: 24px;
 }
 
-.card-slot.revealed {
-  background: var(--danger);
-  border-color: var(--danger);
-}
-
-.card-character {
-  color: white;
-  font-size: 10px;
-  text-align: center;
-  padding: 4px;
+.player-area .card .card-character {
+  font-size: 9px;
+  padding: 2px;
 }
 
 .eliminated-overlay {

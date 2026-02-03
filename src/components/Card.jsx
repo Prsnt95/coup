@@ -1,3 +1,8 @@
+import AssassinImg from '../assets/Assassin.png';
+import AmbassadorImg from '../assets/Ambassador.svg';
+import CaptainImg from '../assets/Captain.svg';
+import ContessaImg from '../assets/contessa.png';
+import DukeImg from '../assets/Duke.svg';
 import './Card.css';
 
 const CHARACTER_COLORS = {
@@ -9,9 +14,18 @@ const CHARACTER_COLORS = {
   Hidden: '#1e293b',
 };
 
+const CHARACTER_IMAGES = {
+  Assassin: AssassinImg,
+  Ambassador: AmbassadorImg,
+  Captain: CaptainImg,
+  Contessa: ContessaImg,
+  Duke: DukeImg,
+};
+
 function Card({ character, revealed, onClick, selected, disabled }) {
   const color = CHARACTER_COLORS[character] || CHARACTER_COLORS.Hidden;
   const isHidden = character === 'Hidden';
+  const imageSrc = CHARACTER_IMAGES[character];
 
   return (
     <div
@@ -27,7 +41,11 @@ function Card({ character, revealed, onClick, selected, disabled }) {
         <div
           className={`card-content ${revealed ? 'revealed-content' : 'owned-content'}`}
         >
-          <div className='card-character'>{character}</div>
+          {imageSrc ? (
+            <img src={imageSrc} alt={character} className='card-image' />
+          ) : (
+            <div className='card-character'>{character}</div>
+          )}
         </div>
       )}
     </div>

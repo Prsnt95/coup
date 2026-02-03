@@ -1,3 +1,4 @@
+import Card from './Card';
 import './PlayerArea.css';
 
 function PlayerArea({ player, isCurrentPlayer, isMe, onSelect, isSelected, pendingAction }) {
@@ -24,16 +25,12 @@ function PlayerArea({ player, isCurrentPlayer, isMe, onSelect, isSelected, pendi
 
       <div className="player-cards">
         {player.cards.map((card, index) => (
-          <div
+          <Card
             key={index}
-            className={`card-slot ${card.revealed ? 'revealed' : ''}`}
-          >
-            {card.revealed ? (
-              <span className="card-character">{card.character}</span>
-            ) : (
-              <span className="card-back">?</span>
-            )}
-          </div>
+            character={card.character}
+            revealed={card.revealed}
+            disabled
+          />
         ))}
       </div>
 
