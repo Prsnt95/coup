@@ -1,0 +1,71 @@
+.card {
+  width: 120px;
+  height: 168px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  perspective: 1000px;
+  position: relative;
+}
+
+.card.disabled {
+  cursor: default;
+}
+
+.card-content {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 3px solid var(--card-color);
+}
+
+.hidden-content {
+  background: linear-gradient(135deg, var(--bg-lighter) 0%, var(--bg-light) 100%);
+}
+
+.card-back {
+  font-size: 64px;
+  color: var(--card-color);
+  font-weight: 700;
+}
+
+.revealed-content,
+.owned-content {
+  background: linear-gradient(135deg, var(--card-color) 0%, color-mix(in srgb, var(--card-color) 80%, black) 100%);
+}
+
+.owned-content {
+  opacity: 0.9;
+}
+
+.card-character {
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.card:hover:not(.disabled) {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.card.selected {
+  transform: translateY(-8px) scale(1.1);
+  box-shadow: 0 0 20px var(--card-color);
+  border: 3px solid var(--warning);
+}
+
+.card.revealed {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.card.revealed .card-content {
+  border-color: var(--danger);
+}
