@@ -1,8 +1,8 @@
 import AssassinImg from '../assets/Assassin.png';
-import AmbassadorImg from '../assets/Ambassador.svg';
-import CaptainImg from '../assets/Captain.svg';
+import AmbassadorImg from '../assets/Ambassador.png';
+import CaptainImg from '../assets/Captain.png';
 import ContessaImg from '../assets/contessa.png';
-import DukeImg from '../assets/Duke.svg';
+import DukeImg from '../assets/Duke.png';
 import './Card.css';
 
 const CHARACTER_COLORS = {
