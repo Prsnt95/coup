@@ -5,7 +5,12 @@ import Card from './Card';
 import './GameBoard.css';
 import PlayerArea from './PlayerArea';
 
-function AmbassadorExchange({ currentCards, drawnCards, keepCount, onConfirm }) {
+function AmbassadorExchange({
+  currentCards,
+  drawnCards,
+  keepCount,
+  onConfirm,
+}) {
   const [selected, setSelected] = useState([]);
 
   useEffect(() => {
@@ -31,7 +36,9 @@ function AmbassadorExchange({ currentCards, drawnCards, keepCount, onConfirm }) 
     <div className='ambassador-modal'>
       <div className='ambassador-panel'>
         <h3>Ambassador Exchange</h3>
-        <p>Select {keepCount} card{keepCount === 1 ? '' : 's'} to keep.</p>
+        <p>
+          Select {keepCount} card{keepCount === 1 ? '' : 's'} to keep.
+        </p>
         <div className='ambassador-section'>
           <h4>Your Cards</h4>
           <div className='ambassador-options'>
@@ -89,8 +96,18 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
   );
   const myPlayer = gameState.players.find((p) => p.id === playerId);
   const isMyTurn = currentPlayer?.id === playerId;
+  // When there's a block, the challenge target is the blocker; otherwise the action player.
   const challengedPlayerId =
-    gameState.pendingAction?.blockerId ?? gameState.pendingAction?.playerId ?? null;
+    gameState.pendingAction?.blockerId ??
+    gameState.pendingAction?.playerId ??
+    null;
+  const challengedCharacter =
+    gameState.pendingAction?.blockCharacter ??
+    gameState.pendingAction?.character ??
+    null;
+  const challengedPlayerName =
+    gameState.players.find((p) => p.id === challengedPlayerId)?.name ??
+    'Unknown';
   const canChallenge =
     gameState.phase === 'challenge-pending' &&
     challengedPlayerId !== null &&
@@ -180,17 +197,10 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
 
   const handleChallenge = () => {
     if (responseLocked) return;
-    if (!gameState.pendingAction) return;
-    let targetId, character;
-    if (gameState.pendingAction.blockerId) {
-      // Challenging a block
-      targetId = gameState.pendingAction.blockerId;
-      character = gameState.pendingAction.blockCharacter;
-    } else {
-      // Challenging an action
-      targetId = gameState.pendingAction.playerId;
-      character = gameState.pendingAction.character;
-    }
+    if (!gameState.pendingAction || challengedPlayerId == null) return;
+    // Always use the same derived target/character as the UI so we never send "challenge yourself".
+    const targetId = challengedPlayerId;
+    const character = challengedCharacter;
     setResponseLocked(true);
     pushMessage('Challenge submitted.', 'info');
     socket.emit('challenge', { targetId, character });
@@ -265,13 +275,14 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
       {myPlayer && (
         <div className='my-hand'>
           <h3>Your Cards</h3>
-          {needsCardChoice && gameState.pendingAction?.challengeStage === 'reveal' && (
-            <p className='challenge-reveal-hint'>
-              You were challenged to show{' '}
-              <strong>{gameState.pendingAction?.challengedCharacter}</strong>. Select a
-              card to reveal.
-            </p>
-          )}
+          {needsCardChoice &&
+            gameState.pendingAction?.challengeStage === 'reveal' && (
+              <p className='challenge-reveal-hint'>
+                You were challenged to show{' '}
+                <strong>{gameState.pendingAction?.challengedCharacter}</strong>.
+                Select a card to reveal.
+              </p>
+            )}
           <div className='cards-container'>
             {myPlayer.cards.map((card, index) => (
               <Card
@@ -308,39 +319,13 @@ function GameBoard({ gameState, playerId, playerName, socket }) {
 
           {canChallenge && (
             <div className='challenge-panel'>
-              {gameState.pendingAction?.blockerId ? (
-                <>
-                  <h3>
-                    Challenge{' '}
-                    {
-                      gameState.players.find(
-                        (p) => p.id === gameState.pendingAction?.blockerId
-                      )?.name
-                    }
-                    's block?
-                  </h3>
-                  <p>
-                    They claimed to have:{' '}
-                    <strong>{gameState.pendingAction?.blockCharacter}</strong>
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h3>
-                    Challenge{' '}
-                    {
-                      gameState.players.find(
-                        (p) => p.id === gameState.pendingAction?.playerId
-                      )?.name
-                    }
-                    ?
-                  </h3>
-                  <p>
-                    They claimed to have:{' '}
-                    <strong>{gameState.pendingAction?.character}</strong>
-                  </p>
-                </>
-              )}
+              <h3>
+                Challenge {challengedPlayerName}
+                {gameState.pendingAction?.blockerId != null ? "'s block?" : '?'}
+              </h3>
+              <p>
+                They claimed to have: <strong>{challengedCharacter}</strong>
+              </p>
               <button
                 className='challenge-button'
                 onClick={handleChallenge}

@@ -8,8 +8,7 @@ export class Game {
     this.deck = [];
     this.treasury = 50;
     this.currentPlayerIndex = 0;
-    this.phase =
-      'waiting'; // waiting, playing, action-pending, challenge-pending, block-pending, ambassador-exchange
+    this.phase = 'waiting'; // waiting, playing, action-pending, challenge-pending, block-pending, ambassador-exchange
     this.pendingAction = null;
     this.responseState = null;
     this.logs = [];
@@ -574,10 +573,23 @@ export class Game {
     }
 
     const challenger = this.getPlayer(challengerId);
-    const target = this.getPlayer(targetId);
+    let target = this.getPlayer(targetId);
 
     if (!challenger || !target) {
       return { error: 'Invalid player' };
+    }
+
+    // If there is a block, the only valid challenge is to the blocker. If the client
+    // sent the action player (e.g. stale UI showing "challenge hi's Assassin"),
+    // treat it as challenging the block so we don't get "cannot challenge yourself".
+    const hasBlock =
+      action.blockerId !== undefined && action.blockerId !== null;
+    if (hasBlock && targetId === action.playerId) {
+      targetId = action.blockerId;
+      target = this.getPlayer(targetId);
+      if (!target) {
+        return { error: 'Invalid challenge target' };
+      }
     }
 
     if (challenger.id === target.id) {
@@ -586,16 +598,12 @@ export class Game {
 
     // Handle challenge to action or block
     let challengedPlayer, challengedCharacter;
-    if (
-      action.blockerId !== undefined &&
-      action.blockerId !== null &&
-      action.blockerId === targetId
-    ) {
+    if (hasBlock && action.blockerId === targetId) {
       // Challenging a block
       challengedPlayer = target;
       challengedCharacter = action.blockCharacter;
-    } else if (action.playerId === targetId) {
-      // Challenging an action
+    } else if (!hasBlock && action.playerId === targetId) {
+      // Challenging an action (no block)
       challengedPlayer = target;
       challengedCharacter = action.character;
     } else {
@@ -610,9 +618,10 @@ export class Game {
       return { error: 'Not eligible to challenge' };
     }
 
-    const challengeLabel = action.blockerId !== undefined && action.blockerId !== null
-      ? `block (${challengedCharacter})`
-      : challengedCharacter;
+    const challengeLabel =
+      action.blockerId !== undefined && action.blockerId !== null
+        ? `block (${challengedCharacter})`
+        : challengedCharacter;
     this.logEvent({
       message: `${challenger.name} challenged ${challengedPlayer.name}'s ${challengeLabel}.`,
       kind: 'challenge',
@@ -826,7 +835,9 @@ export class Game {
       .map((card, index) => (!card.revealed ? index : null))
       .filter((index) => index !== null);
 
-    const currentCards = activeIndexes.map((index) => player.cards[index].character);
+    const currentCards = activeIndexes.map(
+      (index) => player.cards[index].character
+    );
     const pool = [...currentCards, ...drawnCards];
 
     const keepCount = activeIndexes.length;
@@ -961,7 +972,10 @@ export class Game {
         players: [playerId],
       });
 
-      if (eligible.length === 0 || this.responseState.passed.size >= eligible.length) {
+      if (
+        eligible.length === 0 ||
+        this.responseState.passed.size >= eligible.length
+      ) {
         this.clearResponseState();
         this.logEvent({
           message: 'No one challenged.',
@@ -1003,7 +1017,10 @@ export class Game {
         players: [playerId],
       });
 
-      if (eligible.length === 0 || this.responseState.passed.size >= eligible.length) {
+      if (
+        eligible.length === 0 ||
+        this.responseState.passed.size >= eligible.length
+      ) {
         this.clearResponseState();
         this.logEvent({
           message: 'No one blocked.',
