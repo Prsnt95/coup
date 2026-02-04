@@ -668,6 +668,7 @@ export class Game {
       challengedPlayerId: challengedPlayer.id,
       challengedCharacter,
       challengeStage: 'reveal',
+      challengeResult: 'success', // Default to success, update if they reveal the right card
     };
     return {
       success: true,
@@ -755,13 +756,14 @@ export class Game {
       return { success: true };
     }
 
+    const card = player.cards[cardIndex];
+    if (!card || card.revealed) {
+      return { error: 'Invalid card' };
+    }
+
     if (action.challengeStage === 'reveal') {
       if (playerId !== action.challengedPlayerId) {
         return { error: 'Not allowed to reveal for this challenge' };
-      }
-      const card = player.cards[cardIndex];
-      if (!card || card.revealed) {
-        return { error: 'Invalid card' };
       }
 
       const claimed = action.challengedCharacter;
@@ -813,6 +815,7 @@ export class Game {
         outcome: 'lost',
         players: [action.challengedPlayerId],
       });
+
       if (action.blockerId !== undefined && action.blockerId !== null) {
         const blockerName = this.getPlayerName(action.blockerId);
         this.logEvent({
@@ -821,9 +824,6 @@ export class Game {
           outcome: 'lost',
           players: [action.blockerId],
         });
-      }
-
-      if (action.blockerId !== undefined && action.blockerId !== null) {
         const cleanAction = this.stripChallengeFields(action);
         this.pendingAction = cleanAction;
         this.resolveActionIgnoringBlocks(cleanAction);
@@ -833,11 +833,6 @@ export class Game {
         this.nextTurn();
       }
       return { success: true };
-    }
-
-    const card = player.cards[cardIndex];
-    if (!card || card.revealed) {
-      return { error: 'Invalid card' };
     }
 
     const lossResult = this.revealCardLoss(player, cardIndex);
@@ -868,15 +863,10 @@ export class Game {
     }
 
     if (action.challengeResult === 'success') {
-      if (action.blockerId !== undefined && action.blockerId !== null) {
-        const cleanAction = this.stripChallengeFields(action);
-        this.pendingAction = cleanAction;
-        this.resolveActionIgnoringBlocks(cleanAction);
-      } else {
-        this.pendingAction = null;
-        this.phase = 'playing';
-        this.nextTurn();
-      }
+      // Challenged player (action player) lost: action fails
+      this.pendingAction = null;
+      this.phase = 'playing';
+      this.nextTurn();
       return { success: true };
     }
 
