@@ -239,3 +239,82 @@
   background: rgba(245, 158, 11, 0.1);
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
 }
+
+/* ========== Responsive Styles ========== */
+
+@media (max-width: 768px) {
+  .action-panel h3 {
+    font-size: 14px;
+  }
+
+  .actions-grid {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .basic-actions-grid,
+  .character-actions-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .basic-action,
+  .character-action {
+    min-height: 50px;
+    max-width: none;
+    padding: 6px;
+  }
+
+  .basic-action .action-icon,
+  .character-action .action-icon {
+    font-size: 20px;
+  }
+
+  .basic-action .action-label,
+  .character-action .action-label {
+    font-size: 8px;
+  }
+
+  .character-action .action-description {
+    font-size: 7px;
+  }
+
+  .action-group h4 {
+    font-size: 12px;
+  }
+
+  .action-button {
+    padding: 6px;
+    font-size: 11px;
+  }
+
+  .mandatory-coup {
+    font-size: 11px;
+    padding: 8px;
+  }
+
+  .target-selection h4 {
+    font-size: 12px;
+  }
+
+  .target-item {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .basic-actions-grid,
+  .character-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .basic-action .action-label,
+  .character-action .action-label {
+    font-size: 7px;
+  }
+
+  .character-action .action-description {
+    display: none;
+  }
+}

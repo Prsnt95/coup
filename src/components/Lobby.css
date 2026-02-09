@@ -286,3 +286,114 @@
   color: var(--text-dim);
   font-style: italic;
 }
+
+/* ========== Responsive Styles ========== */
+
+@media (max-width: 768px) {
+  .lobby {
+    padding: 24px 16px;
+  }
+
+  .lobby-header {
+    margin-bottom: 40px;
+  }
+
+  .lobby-title {
+    font-size: 48px;
+    letter-spacing: 2px;
+  }
+
+  .lobby-subtitle {
+    font-size: 16px;
+  }
+
+  .lobby-form {
+    padding: 20px;
+  }
+
+  .lobby-input {
+    padding: 12px 14px;
+    font-size: 16px;
+  }
+
+  .room-container {
+    gap: 20px;
+  }
+
+  .room-info {
+    padding: 20px;
+  }
+
+  .room-info h2 {
+    font-size: 36px;
+    letter-spacing: 2px;
+  }
+
+  .room-info p {
+    font-size: 14px;
+  }
+
+  .players-list {
+    padding: 20px;
+  }
+
+  .players-list h3 {
+    font-size: 20px;
+  }
+
+  .players-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+
+  .player-card {
+    padding: 14px;
+  }
+
+  .player-name {
+    font-size: 14px;
+  }
+
+  .action-button {
+    padding: 14px 24px;
+    font-size: 16px;
+  }
+
+  .start-button {
+    padding: 14px 24px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lobby {
+    padding: 16px 12px;
+  }
+
+  .lobby-header {
+    margin-bottom: 28px;
+  }
+
+  .lobby-title {
+    font-size: 36px;
+    letter-spacing: 1px;
+  }
+
+  .lobby-subtitle {
+    font-size: 14px;
+  }
+
+  .lobby-form {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .room-info h2 {
+    font-size: 28px;
+  }
+
+  .players-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

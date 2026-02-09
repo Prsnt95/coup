@@ -457,3 +457,139 @@
   text-transform: uppercase;
   letter-spacing: 2px;
 }
+
+/* ========== Responsive Styles ========== */
+
+@media (max-width: 1024px) {
+  .player-area {
+    min-width: 140px;
+    min-height: 200px;
+  }
+
+  .player-area:not(.me) {
+    min-height: 200px;
+  }
+
+  .player-area:not(.me) .card {
+    width: 52px;
+    height: 73px;
+  }
+
+  .player-area:not(.me) .card .card-back {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .player-area {
+    min-width: 120px;
+    min-height: 180px;
+    padding: 8px;
+  }
+
+  .player-area:not(.me) {
+    min-height: 180px;
+  }
+
+  .player-name {
+    font-size: 12px;
+  }
+
+  .player-area:not(.me) .player-name {
+    font-size: 12px;
+  }
+
+  .player-status {
+    font-size: 9px;
+    padding: 3px 4px;
+  }
+
+  .player-area:not(.me) .player-coins {
+    padding: 4px;
+  }
+
+  .player-area:not(.me) .coin-icon,
+  .player-area:not(.me) .coin-count {
+    font-size: 14px;
+  }
+
+  .player-area:not(.me) .card {
+    width: 48px;
+    height: 67px;
+  }
+
+  .player-area:not(.me) .card .card-back {
+    font-size: 22px;
+  }
+
+  .player-area:not(.me) .card .card-character {
+    font-size: 10px;
+  }
+
+  .player-area .card {
+    width: 48px;
+    height: 67px;
+  }
+
+  .player-area .card .card-back {
+    font-size: 22px;
+  }
+
+  .player-area .card .card-character {
+    font-size: 10px;
+  }
+
+  .card-title {
+    font-size: 9px;
+    max-width: 48px;
+  }
+
+  .you-label,
+  .selected-label {
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .player-area {
+    min-width: 100px;
+    min-height: 160px;
+    padding: 6px;
+  }
+
+  .player-area:not(.me) {
+    min-height: 160px;
+  }
+
+  .player-area:not(.me) .card {
+    width: 42px;
+    height: 59px;
+  }
+
+  .player-area:not(.me) .card .card-back {
+    font-size: 18px;
+  }
+
+  .player-area .card {
+    width: 42px;
+    height: 59px;
+  }
+
+  .player-area .card .card-back {
+    font-size: 18px;
+  }
+
+  .player-area .card .card-character {
+    font-size: 9px;
+  }
+
+  .card-title {
+    font-size: 8px;
+    max-width: 42px;
+  }
+
+  .eliminated-overlay span {
+    font-size: 16px;
+  }
+}

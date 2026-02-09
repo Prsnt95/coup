@@ -642,3 +642,272 @@
   margin-top: 20px;
   animation: pulse 1s ease-in-out infinite;
 }
+
+/* ========== Responsive Styles ========== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .hand-and-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .my-hand,
+  .action-area {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 280px;
+  }
+
+  .players-and-logs {
+    flex-wrap: wrap;
+  }
+
+  .game-log {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+    max-height: 160px;
+    order: 3;
+  }
+
+  .players-container {
+    flex: 1 1 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Small tablet / large phone */
+@media (max-width: 768px) {
+  .game-board {
+    padding: 8px;
+  }
+
+  .game-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+
+  .game-header h1 {
+    font-size: 20px;
+    text-align: center;
+  }
+
+  .game-info {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .room-code,
+  .phase-badge {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .leave-game-button {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .players-and-logs {
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .players-container {
+    gap: 8px;
+    padding-right: 8px;
+  }
+
+  .hand-and-actions {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .my-hand,
+  .action-area {
+    min-height: 240px;
+    padding: 10px;
+  }
+
+  .my-hand h3 {
+    font-size: 14px;
+  }
+
+  .game-log {
+    max-height: 140px;
+    padding: 8px;
+  }
+
+  .game-log h3 {
+    font-size: 12px;
+  }
+
+  .log-entry {
+    font-size: 10px;
+  }
+
+  .winner-content {
+    padding: 32px 24px;
+    margin: 16px;
+  }
+
+  .winner-content h1 {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+
+  .winner-content h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .winner-content p {
+    font-size: 14px;
+  }
+
+  .countdown-timer {
+    font-size: 16px;
+    margin-top: 12px;
+  }
+
+  .ambassador-modal {
+    padding: 12px;
+  }
+
+  .ambassador-panel {
+    padding: 16px;
+  }
+
+  .ambassador-options {
+    gap: 12px;
+  }
+
+  .ambassador-options .card {
+    width: 90px;
+    height: 126px;
+  }
+
+  .ambassador-options .card .card-back {
+    font-size: 48px;
+  }
+
+  .ambassador-options .card .card-character {
+    font-size: 14px;
+  }
+
+  .challenge-panel h3,
+  .block-panel h3 {
+    font-size: 13px;
+  }
+
+  .challenge-panel p,
+  .block-panel p,
+  .card-choice-hint-panel p {
+    font-size: 11px;
+  }
+
+  .challenge-button,
+  .block-button,
+  .pass-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Phone */
+@media (max-width: 480px) {
+  .game-board {
+    padding: 6px;
+  }
+
+  .game-header {
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+
+  .game-header h1 {
+    font-size: 18px;
+  }
+
+  .game-info {
+    gap: 6px;
+  }
+
+  .players-and-logs {
+    margin-bottom: 8px;
+  }
+
+  .hand-and-actions {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .my-hand,
+  .action-area {
+    min-height: 200px;
+    padding: 8px;
+  }
+
+  .cards-container {
+    gap: 8px;
+  }
+
+  .cards-container .card-title {
+    font-size: 10px;
+    max-width: 90px;
+  }
+
+  .choose-card-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .game-log {
+    max-height: 120px;
+    padding: 6px;
+  }
+
+  .winner-content {
+    padding: 24px 16px;
+    margin: 12px;
+  }
+
+  .winner-content h1 {
+    font-size: 24px;
+  }
+
+  .winner-content h2 {
+    font-size: 20px;
+  }
+
+  .winner-content p {
+    font-size: 13px;
+  }
+
+  .countdown-timer {
+    font-size: 14px;
+  }
+
+  .ambassador-options .card {
+    width: 72px;
+    height: 101px;
+  }
+
+  .ambassador-options .card .card-back {
+    font-size: 36px;
+  }
+
+  .ambassador-options .card .card-character {
+    font-size: 11px;
+  }
+}
