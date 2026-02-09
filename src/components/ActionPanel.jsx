@@ -14,61 +14,83 @@ function ActionPanel({ player, onAction, selectedTarget }) {
       )}
 
       <div className="actions-grid">
-        <div className="action-group">
+        <div className="action-group basic-actions">
           <h4>Basic Actions</h4>
-          <button
-            className="action-button income"
-            onClick={() => onAction('income')}
-            disabled={mustCoup}
-          >
-            Income (+1 coin)
-          </button>
-          <button
-            className="action-button foreign-aid"
-            onClick={() => onAction('foreign-aid')}
-            disabled={mustCoup}
-          >
-            Foreign Aid (+2 coins)
-          </button>
-          <button
-            className="action-button coup"
-            onClick={() => onAction('coup')}
-            disabled={player.coins < 7 || !selectedTarget && selectedTarget !== 0}
-          >
-            Coup (7 coins)
-          </button>
+          <div className="basic-actions-grid">
+            <button
+              className="action-button basic-action income"
+              onClick={() => onAction('income')}
+              disabled={mustCoup}
+              title="Income (+1 coin)"
+            >
+              <span className="action-icon">💰</span>
+              <span className="action-label">Income</span>
+            </button>
+            <button
+              className="action-button basic-action foreign-aid"
+              onClick={() => onAction('foreign-aid')}
+              disabled={mustCoup}
+              title="Foreign Aid (+2 coins)"
+            >
+              <span className="action-icon">💵</span>
+              <span className="action-label">Foreign Aid</span>
+            </button>
+            <button
+              className="action-button basic-action coup"
+              onClick={() => onAction('coup')}
+              disabled={player.coins < 7 || !selectedTarget && selectedTarget !== 0}
+              title="Coup (7 coins)"
+            >
+              <span className="action-icon">⚔️</span>
+              <span className="action-label">Coup</span>
+            </button>
+          </div>
         </div>
 
-        <div className="action-group">
+        <div className="action-group character-actions">
           <h4>Character Actions</h4>
-          <button
-            className="action-button duke"
-            onClick={() => onAction('duke')}
-            disabled={mustCoup}
-          >
-            Duke (+3 coins)
-          </button>
-          <button
-            className="action-button assassin"
-            onClick={() => onAction('assassin')}
-            disabled={mustCoup || player.coins < 3 || !selectedTarget && selectedTarget !== 0}
-          >
-            Assassin (3 coins)
-          </button>
-          <button
-            className="action-button captain"
-            onClick={() => onAction('captain')}
-            disabled={mustCoup || !selectedTarget && selectedTarget !== 0}
-          >
-            Captain (Steal 2)
-          </button>
-          <button
-            className="action-button ambassador"
-            onClick={() => onAction('ambassador')}
-            disabled={mustCoup}
-          >
-            Ambassador (Exchange)
-          </button>
+          <div className="character-actions-grid">
+            <button
+              className="action-button character-action duke"
+              onClick={() => onAction('duke')}
+              disabled={mustCoup}
+              title="Duke - Tax (+3 coins)"
+            >
+              <span className="action-icon">👑</span>
+              <span className="action-label">Duke</span>
+              <span className="action-description">Tax</span>
+            </button>
+            <button
+              className="action-button character-action assassin"
+              onClick={() => onAction('assassin')}
+              disabled={mustCoup || player.coins < 3 || !selectedTarget && selectedTarget !== 0}
+              title="Assassin - Assassinate (3 coins)"
+            >
+              <span className="action-icon">🗡️</span>
+              <span className="action-label">Assassin</span>
+              <span className="action-description">Assassinate</span>
+            </button>
+            <button
+              className="action-button character-action captain"
+              onClick={() => onAction('captain')}
+              disabled={mustCoup || !selectedTarget && selectedTarget !== 0}
+              title="Captain - Steal (2 coins)"
+            >
+              <span className="action-icon">🏴‍☠️</span>
+              <span className="action-label">Captain</span>
+              <span className="action-description">Steal</span>
+            </button>
+            <button
+              className="action-button character-action ambassador"
+              onClick={() => onAction('ambassador')}
+              disabled={mustCoup}
+              title="Ambassador - Exchange"
+            >
+              <span className="action-icon">🕴️</span>
+              <span className="action-label">Ambassador</span>
+              <span className="action-description">Exchange</span>
+            </button>
+          </div>
         </div>
       </div>
 

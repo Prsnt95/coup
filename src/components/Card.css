@@ -63,16 +63,106 @@
 }
 
 .card.selected {
-  transform: translateY(-8px) scale(1.1);
-  box-shadow: 0 0 20px var(--card-color);
-  border: 3px solid var(--warning);
+  transform: translateY(-12px) scale(1.15);
+  box-shadow: 0 0 40px rgba(245, 158, 11, 1), 0 8px 32px rgba(245, 158, 11, 0.5);
+  z-index: 5;
+}
+
+.card.selected .card-content {
+  border: 5px solid var(--warning);
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.8), inset 0 0 25px rgba(245, 158, 11, 0.3);
+  position: relative;
+}
+
+.card.selected::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.1));
+  z-index: -1;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  background: var(--warning);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 15px rgba(245, 158, 11, 0.6);
+  z-index: 10;
+  border: 2px solid white;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .card.revealed {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .card.revealed .card-content {
   border-color: var(--danger);
+}
+
+/* Red cross only on player's own cards in my-hand section */
+.my-hand .card.revealed {
+  position: relative;
+}
+
+.my-hand .card.revealed::after {
+  content: '✕';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 80px;
+  color: #ef4444;
+  font-weight: bold;
+  z-index: 10;
+  text-shadow: 
+    3px 3px 6px rgba(0, 0, 0, 0.9),
+    -3px -3px 6px rgba(0, 0, 0, 0.9),
+    3px -3px 6px rgba(0, 0, 0, 0.9),
+    -3px 3px 6px rgba(0, 0, 0, 0.9);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Override checkmark for revealed cards - show cross instead */
+.my-hand .card.revealed.selected::after {
+  content: '✕';
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  font-size: 80px;
+  color: #ef4444;
+  box-shadow: none;
+}
+
+.card.disabled.revealed {
+  opacity: 0.4;
 }
