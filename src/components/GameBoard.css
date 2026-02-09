@@ -438,7 +438,8 @@
 
 .challenge-panel,
 .block-panel,
-.waiting-panel {
+.waiting-panel,
+.card-choice-hint-panel {
   text-align: center;
   padding: 12px;
   background: linear-gradient(135deg, rgba(30, 20, 10, 0.95) 0%, rgba(40, 25, 15, 0.95) 100%);
@@ -473,10 +474,17 @@
 }
 
 .challenge-panel p,
-.block-panel p {
+.block-panel p,
+.card-choice-hint-panel p {
   margin-bottom: 10px;
   color: var(--text-dim);
   font-size: 12px;
+}
+
+.card-choice-hint-panel p {
+  margin-bottom: 0;
+  color: var(--warning);
+  font-size: 13px;
 }
 
 .challenge-button,
