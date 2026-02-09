@@ -722,7 +722,19 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
           onAction={handleAction}
           selectedTarget={selectedTarget}
         />
-      ) : !needsCardChoice ? (
+      ) : needsCardChoice ? (
+        <div className='card-choice-hint-panel'>
+          {isDiscardContext ? (
+            <p>You are losing influence. Select a card to discard.</p>
+          ) : (
+            <p>
+              You were challenged to show{' '}
+              <strong>{gameState.pendingAction?.challengedCharacter}</strong>.
+              Select a card to reveal.
+            </p>
+          )}
+        </div>
+      ) : (
         <div className='waiting-panel'>
               <h3>Waiting for:</h3>
               <p>
@@ -812,7 +824,7 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
                 })()}
               </p>
             </div>
-      ) : null}
+      )}
       </div>
         </div>
       )}
