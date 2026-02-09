@@ -166,3 +166,58 @@
 .card.disabled.revealed {
   opacity: 0.4;
 }
+
+/* ========== Responsive: My-hand cards scale down on smaller screens ========== */
+
+.my-hand .card {
+  width: 120px;
+  height: 168px;
+}
+
+@media (max-width: 768px) {
+  .my-hand .card {
+    width: 90px;
+    height: 126px;
+  }
+
+  .my-hand .card .card-back {
+    font-size: 48px;
+  }
+
+  .my-hand .card .card-character {
+    font-size: 14px;
+  }
+
+  .my-hand .card.revealed::after,
+  .my-hand .card.revealed.selected::after {
+    font-size: 56px;
+  }
+}
+
+@media (max-width: 480px) {
+  .my-hand .card {
+    width: 72px;
+    height: 101px;
+  }
+
+  .my-hand .card .card-back {
+    font-size: 36px;
+  }
+
+  .my-hand .card .card-character {
+    font-size: 11px;
+  }
+
+  .my-hand .card.revealed::after,
+  .my-hand .card.revealed.selected::after {
+    font-size: 44px;
+  }
+
+  .card.selected::after {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+    top: -6px;
+    right: -6px;
+  }
+}
