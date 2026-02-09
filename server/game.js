@@ -61,6 +61,19 @@ export class Game {
     }
   }
 
+  updatePlayerSocketId(playerId, newSocketId) {
+    const player = this.players.find((p) => p.id === playerId);
+    if (player) {
+      player.socketId = newSocketId;
+      return true;
+    }
+    return false;
+  }
+
+  getPlayerById(playerId) {
+    return this.players.find((p) => p.id === playerId);
+  }
+
   getHostId() {
     return this.hostId;
   }
@@ -86,7 +99,15 @@ export class Game {
   }
 
   getCurrentPlayer() {
-    return this.players[this.currentPlayerIndex];
+    if (this.players.length === 0) return null;
+    return this.players[this.currentPlayerIndex] || null;
+  }
+
+  isPlayerConnected(playerId) {
+    // This will be checked externally via the players Map in server/index.js
+    // For now, we'll assume all players are connected unless they're eliminated
+    const player = this.getPlayerById(playerId);
+    return player && !player.eliminated;
   }
 
   getPlayer(playerId) {
@@ -672,8 +693,12 @@ export class Game {
     if (action.type === 'assassin' && character !== 'Contessa') {
       return { error: 'Only Contessa can block Assassin' };
     }
-    if (action.type === 'captain' && character !== 'Captain') {
-      return { error: 'Only Captain can block Captain' };
+    if (
+      action.type === 'captain' &&
+      character !== 'Captain' &&
+      character !== 'Ambassador'
+    ) {
+      return { error: 'Only Captain or Ambassador can block Captain' };
     }
 
     // Block can be challenged
@@ -924,10 +949,30 @@ export class Game {
   }
 
   nextTurn() {
+    const maxAttempts = this.players.length * 2; // Prevent infinite loop
+    let attempts = 0;
+
     do {
       this.currentPlayerIndex =
         (this.currentPlayerIndex + 1) % this.players.length;
-    } while (this.getCurrentPlayer().eliminated);
+      attempts++;
+
+      const current = this.getCurrentPlayer();
+      // Skip eliminated players (disconnected players are handled externally)
+      if (!current || current.eliminated) {
+        continue;
+      }
+
+      // If we found a non-eliminated player, we're done
+      break;
+    } while (attempts < maxAttempts);
+
+    // Safety check: if all players are eliminated, end the game
+    const current = this.getCurrentPlayer();
+    if (!current || current.eliminated) {
+      this.checkGameEnd();
+      return;
+    }
 
     this.checkGameEnd();
   }
@@ -1059,6 +1104,16 @@ export class Game {
         activeIndexes: null,
       };
     }
+    // Convert responseState.passed Set to Array for JSON serialization
+    let publicResponseState = null;
+    if (this.responseState) {
+      publicResponseState = {
+        type: this.responseState.type,
+        eligible: this.responseState.eligible,
+        passed: Array.from(this.responseState.passed || []),
+      };
+    }
+
     return {
       roomId: this.roomId,
       phase: this.phase,
@@ -1079,6 +1134,7 @@ export class Game {
         eliminated: p.eliminated,
       })),
       pendingAction: publicPendingAction,
+      responseState: publicResponseState,
       treasury: this.treasury,
       deckSize: this.deck.length,
       logs: this.logs,
