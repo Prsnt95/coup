@@ -1,32 +1,50 @@
 import Card from './Card';
 import './PlayerArea.css';
 
-function PlayerArea({ player, isCurrentPlayer, isMe, onSelect, isSelected, pendingAction, playerColor, status, formatStatusMessage }) {
-  const isTarget = pendingAction && (
-    pendingAction.targetId === player.id ||
-    pendingAction.playerId === player.id
-  );
+function PlayerArea({
+  player,
+  isCurrentPlayer,
+  isMe,
+  onSelect,
+  isSelected,
+  pendingAction,
+  playerColor,
+  status,
+  formatStatusMessage,
+}) {
+  const isTarget =
+    pendingAction &&
+    (pendingAction.targetId === player.id ||
+      pendingAction.playerId === player.id);
 
   // Format the status message if a formatter is provided
-  const formattedStatus = status && formatStatusMessage ? formatStatusMessage(status) : status;
+  const formattedStatus =
+    status && formatStatusMessage ? formatStatusMessage(status) : status;
+
+  const isFiery = !player.eliminated && player.coins >= 7;
 
   return (
     <div
-      className={`player-area ${isCurrentPlayer ? 'current-turn' : ''} ${isMe ? 'me' : ''} ${isSelected ? 'selected' : ''} ${isTarget ? 'target' : ''} ${player.eliminated ? 'eliminated' : ''}`}
+      className={`player-area ${isCurrentPlayer ? 'current-turn' : ''} ${isMe ? 'me' : ''} ${isSelected ? 'selected' : ''} ${isTarget ? 'target' : ''} ${player.eliminated ? 'eliminated' : ''} ${isFiery ? 'fire-glow' : ''}`}
       onClick={onSelect}
       style={{ '--player-color': playerColor }}
     >
-      <div className="player-header">
-        <h3 className="player-name">{player.name}</h3>
-        <div className="player-labels">
-          {isMe && <span className="you-label">You</span>}
-          {isSelected && <span className="selected-label">Selected</span>}
-          {isCurrentPlayer && <span className="turn-indicator">●</span>}
+      <div className='player-header'>
+        <h3 className='player-name'>{player.name}</h3>
+        <div className='player-labels'>
+          {isMe && <span className='you-label'>You</span>}
+          {isSelected && <span className='selected-label'>Selected</span>}
+          {isCurrentPlayer && <span className='turn-indicator'>●</span>}
         </div>
       </div>
-      
+
       {status && !player.eliminated && (
-        <div className={`player-status status-${status.toLowerCase().replace(/[,\s]+/g, '-').replace(/[^a-z0-9-]/g, '')}`}>
+        <div
+          className={`player-status status-${status
+            .toLowerCase()
+            .replace(/[,\s]+/g, '-')
+            .replace(/[^a-z0-9-]/g, '')}`}
+        >
           {formatStatusMessage ? (
             <span dangerouslySetInnerHTML={{ __html: formattedStatus }} />
           ) : (
@@ -34,31 +52,37 @@ function PlayerArea({ player, isCurrentPlayer, isMe, onSelect, isSelected, pendi
           )}
         </div>
       )}
-      
-      <div className={`player-coins ${player.coins >= 7 ? 'fire-glow' : ''}`}>
-        <span className="coin-icon">🪙</span>
-        <span className="coin-count">{player.coins}</span>
+
+      <div className={`player-coins ${isFiery ? 'fire-glow' : ''}`}>
+        <span className='coin-icon'>🪙</span>
+        <span className='coin-count'>{player.coins}</span>
       </div>
 
-      <div className="player-cards">
+      <div className='player-cards'>
         {player.cards.map((card, index) => (
-          <div key={index} className="card-wrapper">
+          <div key={index} className='card-wrapper'>
             <Card
               character={card.character}
               revealed={card.revealed}
               disabled
             />
             {card.revealed && (
-              <div className="card-title">
-                {card.character}
-              </div>
+              <div className='card-title'>{card.character}</div>
             )}
           </div>
         ))}
       </div>
 
+      {isFiery && (
+        <div className='fire-flames' aria-hidden>
+          {[...Array(7)].map((_, i) => (
+            <span key={i} className='flame' />
+          ))}
+        </div>
+      )}
+
       {player.eliminated && (
-        <div className="eliminated-overlay">
+        <div className='eliminated-overlay'>
           <span>ELIMINATED</span>
         </div>
       )}
