@@ -290,6 +290,52 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Voice chat signaling (WebRTC)
+  socket.on('voice-offer', ({ targetPlayerId, offer }) => {
+    const playerData = players.get(socket.id);
+    if (!playerData || playerData.roomId == null) return;
+    const targetSocketId = [...players.entries()].find(
+      ([, data]) =>
+        data.roomId === playerData.roomId && data.playerId === targetPlayerId
+    )?.[0];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('voice-offer', {
+        fromPlayerId: playerData.playerId,
+        offer,
+      });
+    }
+  });
+
+  socket.on('voice-answer', ({ targetPlayerId, answer }) => {
+    const playerData = players.get(socket.id);
+    if (!playerData || playerData.roomId == null) return;
+    const targetSocketId = [...players.entries()].find(
+      ([, data]) =>
+        data.roomId === playerData.roomId && data.playerId === targetPlayerId
+    )?.[0];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('voice-answer', {
+        fromPlayerId: playerData.playerId,
+        answer,
+      });
+    }
+  });
+
+  socket.on('voice-ice-candidate', ({ targetPlayerId, candidate }) => {
+    const playerData = players.get(socket.id);
+    if (!playerData || playerData.roomId == null) return;
+    const targetSocketId = [...players.entries()].find(
+      ([, data]) =>
+        data.roomId === playerData.roomId && data.playerId === targetPlayerId
+    )?.[0];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('voice-ice-candidate', {
+        fromPlayerId: playerData.playerId,
+        candidate,
+      });
+    }
+  });
+
   socket.on('leave-game', () => {
     const playerData = players.get(socket.id);
     if (!playerData) {

@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
+import VoiceChat from './components/VoiceChat';
 import './App.css';
 
-// In dev (Vite on :3000), backend is on :3001. In production use VITE_SOCKET_URL (e.g. your Render backend).
+// In dev, backend is always on :3001. In production use VITE_SOCKET_URL (e.g. your Render backend).
 const socketUrl =
   import.meta.env.VITE_SOCKET_URL ||
-  (window.location.port === '3000' ? 'http://localhost:3001' : window.location.origin);
+  (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
 const socket = io(socketUrl, {
   reconnection: true,
   reconnectionDelay: 50,
@@ -203,25 +204,43 @@ function App() {
 
   if (gameState && gameState.phase !== 'waiting') {
     return (
-      <GameBoard
-        gameState={gameState}
-        playerId={playerId}
-        playerName={playerName}
-        socket={socket}
-        onLeaveGame={handleLeaveGame}
-      />
+      <>
+        <GameBoard
+          gameState={gameState}
+          playerId={playerId}
+          playerName={playerName}
+          socket={socket}
+          onLeaveGame={handleLeaveGame}
+        />
+        <VoiceChat
+          socket={socket}
+          roomId={roomId}
+          playerId={playerId}
+          players={gameState?.players || []}
+          enabled={!!(roomId && playerId != null && gameState?.players?.length > 0)}
+        />
+      </>
     );
   }
 
   return (
-    <Lobby
-      onCreateRoom={handleCreateRoom}
-      onJoinRoom={handleJoinRoom}
-      roomId={roomId}
-      gameState={gameState}
-      playerId={playerId}
-      socket={socket}
-    />
+    <>
+      <Lobby
+        onCreateRoom={handleCreateRoom}
+        onJoinRoom={handleJoinRoom}
+        roomId={roomId}
+        gameState={gameState}
+        playerId={playerId}
+        socket={socket}
+      />
+      <VoiceChat
+        socket={socket}
+        roomId={roomId}
+        playerId={playerId}
+        players={gameState?.players || []}
+        enabled={!!(roomId && playerId != null && gameState?.players?.length > 0)}
+      />
+    </>
   );
 }
 
