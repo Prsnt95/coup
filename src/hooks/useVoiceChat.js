@@ -18,10 +18,25 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
 
   const getLocalStream = useCallback(
     async (includeAudio = false, includeVideo = false) => {
-      if (!includeAudio && !includeVideo) return null;
       const existing = localStreamRef.current;
       const hasAudio = existing?.getAudioTracks().length > 0;
       const hasVideo = existing?.getVideoTracks().length > 0;
+
+      if (existing && !includeAudio && !includeVideo) {
+        [...existing.getTracks()].forEach((t) => {
+          t.stop();
+          existing.removeTrack(t);
+        });
+        peersRef.current.forEach(({ pc }) => {
+          pc.getSenders().forEach((sender) => {
+            if (sender.track) sender.replaceTrack(null);
+          });
+        });
+        localStreamRef.current = null;
+        setLocalStream(null);
+        return null;
+      }
+      if (!includeAudio && !includeVideo) return null;
 
       if (existing) {
         if (includeAudio && !hasAudio) {
@@ -50,7 +65,7 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
           }
         }
         if (!includeAudio && hasAudio) {
-          existing.getAudioTracks().forEach((t) => {
+          [...existing.getAudioTracks()].forEach((t) => {
             t.stop();
             existing.removeTrack(t);
           });
@@ -88,7 +103,8 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
           }
         }
         if (!includeVideo && hasVideo) {
-          existing.getVideoTracks().forEach((t) => {
+          const videoTracks = [...existing.getVideoTracks()];
+          videoTracks.forEach((t) => {
             t.stop();
             existing.removeTrack(t);
           });
@@ -96,10 +112,9 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
             const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
             if (sender) sender.replaceTrack(null);
           });
-          setLocalStream(
-            existing.getTracks().length > 0 ? new MediaStream(existing.getTracks()) : null
-          );
-          if (existing.getTracks().length === 0) {
+          const remaining = existing.getTracks();
+          setLocalStream(remaining.length > 0 ? new MediaStream(remaining) : null);
+          if (remaining.length === 0) {
             localStreamRef.current = null;
           }
           return localStreamRef.current;
