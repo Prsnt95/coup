@@ -5,73 +5,163 @@
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  background: linear-gradient(135deg, var(--bg) 0%, #1a1f3a 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.lobby-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lobby-bg-art {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.28;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 70%);
+}
+
+.lobby-bg-gradient {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(236, 72, 153, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg) 0%, #0f0d1a 50%, #0a0812 100%);
+}
+
+.lobby-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 70%);
+}
+
+.lobby-bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: lobby-orb-float 15s ease-in-out infinite;
+}
+
+.lobby-bg-orb-1 {
+  width: 400px;
+  height: 400px;
+  background: var(--primary);
+  top: -100px;
+  left: -100px;
+  animation-delay: 0s;
+}
+
+.lobby-bg-orb-2 {
+  width: 300px;
+  height: 300px;
+  background: var(--accent);
+  bottom: -50px;
+  right: -50px;
+  animation-delay: -5s;
+}
+
+.lobby-bg-orb-3 {
+  width: 200px;
+  height: 200px;
+  background: var(--secondary);
+  top: 40%;
+  right: 20%;
+  animation-delay: -10s;
+}
+
+@keyframes lobby-orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 30px) scale(0.95); }
 }
 
 .lobby-header {
   text-align: center;
-  margin-bottom: 60px;
+  margin-bottom: 56px;
+  position: relative;
+  z-index: 1;
 }
 
 .lobby-title {
-  font-size: 72px;
+  font-size: 3.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 10px;
-  text-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
-  letter-spacing: 4px;
+  margin-bottom: 8px;
+  color: #fff;
+  letter-spacing: 0.02em;
 }
 
 .lobby-subtitle {
-  font-size: 18px;
+  font-size: 1rem;
   color: var(--text-dim);
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .lobby-actions {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+  position: relative;
+  z-index: 1;
+}
+
+.lobby-action-buttons {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .action-button {
-  padding: 18px 32px;
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px;
+  font-size: 15px;
   font-weight: 600;
-  border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-family: inherit;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  border: 2px solid transparent;
 }
 
 .action-button.create {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--primary);
   color: white;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  border-color: var(--primary);
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.35);
 }
 
 .action-button.create:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.45);
 }
 
 .action-button.join {
-  background: linear-gradient(135deg, var(--secondary) 0%, #7c3aed 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+  background: transparent;
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 .action-button.join:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
 }
 
 .lobby-form {
@@ -81,10 +171,12 @@
   width: 100%;
   max-width: 400px;
   padding: 30px;
-  background: var(--bg-light);
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.3s ease-out;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.05) inset;
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes slideUp {
@@ -99,42 +191,43 @@
 }
 
 .lobby-input {
-  padding: 14px 18px;
+  padding: 16px 20px;
   font-size: 16px;
-  background: var(--bg-lighter);
-  border: 2px solid transparent;
-  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
   color: var(--text);
-  font-family: inherit;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 
 .lobby-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: rgba(15, 23, 42, 0.8);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .lobby-input::placeholder {
   color: var(--text-dim);
+  opacity: 0.8;
 }
 
 .form-buttons {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .submit-button,
 .cancel-button {
   flex: 1;
-  padding: 12px;
-  font-size: 16px;
+  padding: 12px 18px;
+  font-size: 15px;
   font-weight: 600;
-  border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: inherit;
+  transition: all 0.25s ease;
+  border: none;
 }
 
 .submit-button {
@@ -148,12 +241,14 @@
 }
 
 .cancel-button {
-  background: var(--bg-lighter);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .cancel-button:hover {
-  background: #475569;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
 }
 
 .room-container {
@@ -162,39 +257,53 @@
   display: flex;
   flex-direction: column;
   gap: 30px;
+  position: relative;
+  z-index: 1;
 }
 
 .room-info {
   text-align: center;
-  padding: 30px;
-  background: var(--bg-light);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  padding: 32px 40px;
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.room-info h2 {
-  font-size: 48px;
+.room-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.room-code {
+  font-size: 2.25rem;
   font-weight: 700;
   color: var(--primary);
-  margin-bottom: 10px;
-  letter-spacing: 3px;
+  margin-bottom: 6px;
+  letter-spacing: 0.1em;
 }
 
-.room-info p {
+.room-hint {
+  font-size: 14px;
   color: var(--text-dim);
-  font-size: 16px;
 }
 
 .players-list {
   padding: 30px;
-  background: var(--bg-light);
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .players-list h3 {
   margin-bottom: 20px;
-  font-size: 24px;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -230,8 +339,7 @@
 
 .player-name {
   font-weight: 600;
-  font-size: 16px;
-  margin-bottom: 8px;
+  font-size: 15px;
 }
 
 .you-badge,
@@ -257,23 +365,25 @@
 }
 
 .start-button {
-  padding: 18px 32px;
-  font-size: 20px;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--success);
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.35);
 }
 
 .start-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.45);
 }
 
 .start-button:disabled {
@@ -283,8 +393,8 @@
 
 .waiting-text {
   text-align: center;
+  font-size: 14px;
   color: var(--text-dim);
-  font-style: italic;
 }
 
 /* ========== Responsive Styles ========== */
@@ -299,12 +409,11 @@
   }
 
   .lobby-title {
-    font-size: 48px;
-    letter-spacing: 2px;
+    font-size: 2.5rem;
   }
 
   .lobby-subtitle {
-    font-size: 16px;
+    font-size: 0.95rem;
   }
 
   .lobby-form {
@@ -321,16 +430,11 @@
   }
 
   .room-info {
-    padding: 20px;
+    padding: 24px 28px;
   }
 
-  .room-info h2 {
-    font-size: 36px;
-    letter-spacing: 2px;
-  }
-
-  .room-info p {
-    font-size: 14px;
+  .room-code {
+    font-size: 2rem;
   }
 
   .players-list {
@@ -354,9 +458,14 @@
     font-size: 14px;
   }
 
+  .lobby-action-buttons {
+    flex-direction: column;
+  }
+
   .action-button {
-    padding: 14px 24px;
-    font-size: 16px;
+    padding: 16px 24px;
+    font-size: 14px;
+    justify-content: center;
   }
 
   .start-button {
@@ -375,12 +484,11 @@
   }
 
   .lobby-title {
-    font-size: 36px;
-    letter-spacing: 1px;
+    font-size: 2rem;
   }
 
   .lobby-subtitle {
-    font-size: 14px;
+    font-size: 0.9rem;
   }
 
   .lobby-form {
@@ -388,8 +496,8 @@
     gap: 12px;
   }
 
-  .room-info h2 {
-    font-size: 28px;
+  .room-code {
+    font-size: 1.75rem;
   }
 
   .players-grid {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import coupBg from '../assets/coup-background.png';
 import './Lobby.css';
 
 function Lobby({
@@ -35,16 +36,25 @@ function Lobby({
 
   return (
     <div className='lobby'>
+      <div className='lobby-bg'>
+        <div className='lobby-bg-gradient' />
+        <div className='lobby-bg-grid' />
+        <div className='lobby-bg-orb lobby-bg-orb-1' />
+        <div className='lobby-bg-orb lobby-bg-orb-2' />
+        <div className='lobby-bg-orb lobby-bg-orb-3' />
+        <div className='lobby-bg-art' style={{ backgroundImage: `url(${coupBg})` }} />
+      </div>
       <div className='lobby-header'>
         <h1 className='lobby-title'>COUP</h1>
-        <p className='lobby-subtitle'>A Game of Deception & Strategy</p>
+        <p className='lobby-subtitle'>A game of deception and strategy</p>
       </div>
 
       {roomId ? (
         <div className='room-container'>
           <div className='room-info'>
-            <h2>Room: {roomId}</h2>
-            <p>Share this code with friends to join</p>
+            <span className='room-label'>Room code</span>
+            <div className='room-code'>{roomId}</div>
+            <p className='room-hint'>Share with friends to join</p>
           </div>
 
           <div className='players-list'>
@@ -85,24 +95,26 @@ function Lobby({
         </div>
       ) : (
         <div className='lobby-actions'>
-          <button
-            className='action-button create'
-            onClick={() => {
-              setShowCreate(true);
-              setShowJoin(false);
-            }}
-          >
-            Create Room
-          </button>
-          <button
-            className='action-button join'
-            onClick={() => {
-              setShowJoin(true);
-              setShowCreate(false);
-            }}
-          >
-            Join Room
-          </button>
+          <div className='lobby-action-buttons'>
+            <button
+              className='action-button create'
+              onClick={() => {
+                setShowCreate(true);
+                setShowJoin(false);
+              }}
+            >
+              Create Room
+            </button>
+            <button
+              className='action-button join'
+              onClick={() => {
+                setShowJoin(true);
+                setShowCreate(false);
+              }}
+            >
+              Join Room
+            </button>
+          </div>
 
           {showCreate && (
             <form className='lobby-form' onSubmit={handleCreate}>
