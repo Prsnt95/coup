@@ -15,6 +15,8 @@ export class Game {
     this.logSeq = 0;
     this.hostId = null;
     this.winner = null;
+    this.revealSeq = 0;
+    this.lastRevealedCard = null; // For dramatic reveal animation on frontend
     this.initializeDeck();
   }
 
@@ -235,6 +237,14 @@ export class Game {
     if (replacement) {
       player.cards[cardIndex] = { character: replacement, revealed: false };
     }
+  }
+
+  setLastRevealedCard(payload) {
+    this.revealSeq += 1;
+    this.lastRevealedCard = {
+      id: this.revealSeq,
+      ...payload,
+    };
   }
 
   revealCardLoss(player, cardIndex) {
@@ -724,6 +734,8 @@ export class Game {
   }
 
   chooseCard(playerId, cardIndex) {
+    this.lastRevealedCard = null; // Clear when processing any card choice
+
     const player = this.getPlayer(playerId);
     if (!player) {
       return { error: 'Invalid player' };
@@ -753,8 +765,8 @@ export class Game {
       }
 
       const claimed = action.challengedCharacter;
+      const challengerName = this.getPlayerName(action.challengerId);
       if (card.character === claimed) {
-        const challengerName = this.getPlayerName(action.challengerId);
         this.logEvent({
           message: `${player.name} revealed ${claimed}. Challenge failed — ${challengerName} loses influence.`,
           kind: 'challenge',
@@ -763,6 +775,15 @@ export class Game {
         });
         // Exchange revealed card for a new one.
         this.exchangeCardAtIndex(player, cardIndex);
+
+        this.setLastRevealedCard({
+          character: claimed,
+          playerId: player.id,
+          playerName: player.name,
+          challengerId: action.challengerId,
+          challengerName,
+          challengeResult: 'failed',
+        });
 
         this.pendingAction = {
           ...action,
@@ -776,6 +797,15 @@ export class Game {
       if (lossResult?.error) {
         return lossResult;
       }
+
+      this.setLastRevealedCard({
+        character: card.character,
+        playerId: player.id,
+        playerName: player.name,
+        challengerId: action.challengerId,
+        challengerName,
+        challengeResult: 'success',
+      });
 
       this.logEvent({
         message: `${player.name} did not reveal ${claimed}. Challenge succeeded — ${player.name} loses influence.`,
@@ -813,6 +843,16 @@ export class Game {
     const lossResult = this.revealCardLoss(player, cardIndex);
     if (lossResult?.error) {
       return lossResult;
+    }
+
+    // Coup or assassination reveal
+    if (action.type === 'coup' || action.type === 'assassination') {
+      this.setLastRevealedCard({
+        character: card.character,
+        playerId: player.id,
+        playerName: player.name,
+        context: action.type === 'coup' ? 'coup' : 'assassination',
+      });
     }
 
     if (action.challengeResult === 'failed') {
@@ -1145,6 +1185,7 @@ export class Game {
           }
         : null,
       hostId: this.hostId,
+      lastRevealedCard: this.lastRevealedCard,
     };
   }
 }

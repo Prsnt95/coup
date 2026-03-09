@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import ActionPanel from './ActionPanel';
 import Card from './Card';
 import './GameBoard.css';
 import PlayerArea from './PlayerArea';
+import RevealModal from './RevealModal';
 
 function AmbassadorExchange({
   currentCards,
@@ -89,9 +90,12 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
   const [statusKind, setStatusKind] = useState('info');
   const [responseLocked, setResponseLocked] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [revealModal, setRevealModal] = useState(null);
   const lastLogIdRef = useRef(null);
+  const logEntriesRef = useRef(null);
   const messageTimerRef = useRef(null);
   const countdownTimerRef = useRef(null);
+  const lastShownRevealIdRef = useRef(null);
 
   // Create player color mapping (avoiding log colors: orange/warning #f59e0b, red/danger #ef4444)
   // Using high-contrast colors that are distinct from each other
@@ -179,8 +183,7 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
   })();
   const needsCardChoice = mustChooseCardPlayerId === playerId;
   const isRevealContext =
-    needsCardChoice &&
-    gameState.pendingAction?.challengeStage === 'reveal';
+    needsCardChoice && gameState.pendingAction?.challengeStage === 'reveal';
   const isDiscardContext = needsCardChoice && !isRevealContext;
 
   // Function to determine player status based on current game state
@@ -327,6 +330,99 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
 
   const responseKey = `${gameState.phase}:${gameState.pendingAction?.type ?? ''}:${gameState.pendingAction?.playerId ?? ''}:${gameState.pendingAction?.blockerId ?? ''}:${gameState.pendingAction?.targetId ?? ''}`;
 
+  const endgameStats = useMemo(() => {
+    const players = gameState?.players || [];
+    const logs = gameState?.logs || [];
+
+    const statsById = new Map(
+      players.map((p) => [
+        p.id,
+        {
+          id: p.id,
+          name: p.name,
+          liesSuccessful: 0,
+          liesUnsuccessful: 0,
+          challengesMade: 0,
+          challengesWon: 0,
+          challengesLost: 0,
+          coinsStolen: 0,
+          coups: 0,
+          assassinations: 0,
+          blocks: 0,
+        },
+      ])
+    );
+
+    const playerIdByName = new Map(players.map((p) => [p.name, p.id]));
+    const add = (id, key, amount = 1) => {
+      if (id === null || id === undefined) return;
+      const row = statsById.get(id);
+      if (!row) return;
+      row[key] += amount;
+    };
+
+    let pendingChallenge = null;
+
+    logs.forEach((entry) => {
+      const message = entry.message || '';
+      let match;
+
+      match = message.match(/^(.+?) challenged (.+?)'s /);
+      if (match) {
+        const challengerName = match[1];
+        const challengedName = match[2];
+        const challengerId = playerIdByName.get(challengerName);
+        const challengedId = playerIdByName.get(challengedName);
+
+        add(challengerId, 'challengesMade');
+        pendingChallenge = { challengerId, challengedId };
+        return;
+      }
+
+      if (message.includes('Challenge failed') && pendingChallenge) {
+        add(pendingChallenge.challengerId, 'challengesLost');
+        // "Successful lie" here means their claim survived a challenge.
+        add(pendingChallenge.challengedId, 'liesSuccessful');
+        pendingChallenge = null;
+        return;
+      }
+
+      if (message.includes('Challenge succeeded') && pendingChallenge) {
+        add(pendingChallenge.challengerId, 'challengesWon');
+        add(pendingChallenge.challengedId, 'liesUnsuccessful');
+        pendingChallenge = null;
+        return;
+      }
+
+      match = message.match(/^(.+?) steals (\d+) coin/);
+      if (match) {
+        const playerIdMatch = playerIdByName.get(match[1]);
+        const amount = parseInt(match[2], 10) || 0;
+        add(playerIdMatch, 'coinsStolen', amount);
+        return;
+      }
+
+      match = message.match(/^(.+?) launched a Coup against /);
+      if (match) {
+        add(playerIdByName.get(match[1]), 'coups');
+        return;
+      }
+
+      match = message.match(/^(.+?) attempted an assassination on /);
+      if (match) {
+        add(playerIdByName.get(match[1]), 'assassinations');
+        return;
+      }
+
+      match = message.match(/^(.+?) blocked /);
+      if (match) {
+        add(playerIdByName.get(match[1]), 'blocks');
+      }
+    });
+
+    return players.map((p) => statsById.get(p.id));
+  }, [gameState?.players, gameState?.logs]);
+
   useEffect(() => {
     setResponseLocked(false);
   }, [responseKey]);
@@ -341,6 +437,15 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
       setStatusMessage(null);
     }, 4000);
   };
+
+  // Show dramatic reveal modal when lastRevealedCard is present
+  useEffect(() => {
+    const r = gameState?.lastRevealedCard;
+    if (!r) return;
+    if (r.id === lastShownRevealIdRef.current) return;
+    lastShownRevealIdRef.current = r.id;
+    setRevealModal(r);
+  }, [gameState?.lastRevealedCard]);
 
   useEffect(() => {
     const logs = gameState?.logs;
@@ -366,6 +471,12 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
       pushMessage(relevant.message, 'danger');
     }
   }, [gameState?.logs, playerId]);
+
+  // Keep game log pinned to newest entry
+  useEffect(() => {
+    if (!logEntriesRef.current) return;
+    logEntriesRef.current.scrollTop = logEntriesRef.current.scrollHeight;
+  }, [gameState?.logs]);
 
   const handleAction = (action, character = null) => {
     if (action === 'coup' || action === 'assassin' || action === 'captain') {
@@ -416,7 +527,7 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
   // Countdown timer for game over screen
   useEffect(() => {
     if (gameState?.winner) {
-      setCountdown(5);
+      setCountdown(12);
       countdownTimerRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -445,6 +556,33 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
           <h1>🎉 Game Over! 🎉</h1>
           <h2>{gameState.winner.name} Wins!</h2>
           <p>They were the last player standing.</p>
+          <div className='endgame-stats'>
+            <h3>Final Stats</h3>
+            <div className='endgame-stats-grid'>
+              {endgameStats.map((stats) => (
+                <div
+                  key={stats.id}
+                  className={`endgame-player-card ${
+                    stats.id === gameState.winner?.id ? 'winner' : ''
+                  }`}
+                >
+                  <h4>{stats.name}</h4>
+                  <p>
+                    Lies: {stats.liesSuccessful} successful /{' '}
+                    {stats.liesUnsuccessful} caught
+                  </p>
+                  <p>
+                    Challenges: {stats.challengesMade} made,{' '}
+                    {stats.challengesWon} won, {stats.challengesLost} lost
+                  </p>
+                  <p>Coins stolen: {stats.coinsStolen}</p>
+                  <p>Coups: {stats.coups}</p>
+                  <p>Assassinations: {stats.assassinations}</p>
+                  <p>Blocks: {stats.blocks}</p>
+                </div>
+              ))}
+            </div>
+          </div>
           <p className='countdown-timer'>
             Returning to home screen in {countdown}...
           </p>
@@ -516,7 +654,7 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
         <div className='game-log'>
           <h3>Game Log</h3>
           {(gameState.logs || []).length > 0 ? (
-            <div className='log-entries'>
+            <div className='log-entries' ref={logEntriesRef}>
               {(gameState.logs || []).slice(-15).map((entry) => {
                 const isMine = entry.players?.includes(playerId);
                 const isLoss = entry.outcome === 'lost';
@@ -540,293 +678,315 @@ function GameBoard({ gameState, playerId, playerName, socket, onLeaveGame }) {
 
       {myPlayer && (
         <div className='hand-and-actions'>
-        <div className='my-hand'>
-          <h3>Your Cards</h3>
-          {isRevealContext && (
-            <p className='challenge-reveal-hint'>
-              You were challenged to show{' '}
-              <strong>{gameState.pendingAction?.challengedCharacter}</strong>.
-              Select a card to reveal.
-            </p>
-          )}
-          {isDiscardContext && (
-            <p className='challenge-reveal-hint'>
-              You are losing influence. Select a card to discard.
-            </p>
-          )}
-          <div className='cards-container'>
-            {myPlayer.cards.map((card, index) => (
-              <div key={index} className='card-wrapper'>
-                <Card
-                  character={card.character}
-                  revealed={card.revealed}
-                  onClick={() => {
-                    if (needsCardChoice && !card.revealed) {
-                      setSelectedCard(index);
-                    }
-                  }}
-                  selected={selectedCard === index}
-                  disabled={!needsCardChoice || card.revealed}
-                />
-                <div className='card-title'>{card.character}</div>
-              </div>
-            ))}
-          </div>
-          {needsCardChoice && (
-            <button
-              className='choose-card-button'
-              onClick={() => {
-                if (
-                  selectedCard !== null &&
-                  myPlayer.cards[selectedCard] &&
-                  !myPlayer.cards[selectedCard].revealed
-                ) {
-                  handleCardChoice(selectedCard);
-                }
-              }}
-              disabled={
-                selectedCard === null ||
-                (selectedCard !== null &&
-                  myPlayer.cards[selectedCard]?.revealed)
-              }
-            >
-              {isRevealContext ? 'Reveal' : 'Discard'}
-            </button>
-          )}
-
-          {statusMessage && (
-            <div className={`status-banner ${statusKind}`}>{statusMessage}</div>
-          )}
-        </div>
-
-      {/* Action area: challenge, block, actions, or waiting */}
-      <div className='action-area'>
-      {canChallenge ? (
-        <div className='challenge-panel'>
-          <h3>
-            Challenge {challengedPlayerName}
-            {gameState.pendingAction?.blockerId != null ? "'s block?" : '?'}
-          </h3>
-          <p>
-            They claimed to have: <strong>{challengedCharacter}</strong>
-          </p>
-          <button
-            className='challenge-button'
-            onClick={handleChallenge}
-            disabled={responseLocked}
-          >
-            Challenge
-          </button>
-          <button
-            className='pass-button'
-            onClick={handlePass}
-            disabled={responseLocked}
-          >
-            Pass
-          </button>
-        </div>
-      ) : canBlock && gameState.pendingAction?.type === 'foreign-aid' ? (
-        <div className='block-panel'>
-          <h3>Block Foreign Aid?</h3>
-          <p>
-            {
-              gameState.players.find(
-                (p) => p.id === gameState.pendingAction?.playerId
-              )?.name
-            }{' '}
-            is taking Foreign Aid
-          </p>
-          <button
-            className='block-button'
-            onClick={() => handleBlock('Duke')}
-            disabled={responseLocked}
-          >
-            Block with Duke
-          </button>
-          <button
-            className='pass-button'
-            onClick={handlePass}
-            disabled={responseLocked}
-          >
-            Pass
-          </button>
-        </div>
-      ) : canBlock && gameState.pendingAction?.type === 'assassin' ? (
-        <div className='block-panel'>
-          <h3>Block Assassination?</h3>
-          <p>
-            {
-              gameState.players.find(
-                (p) => p.id === gameState.pendingAction?.targetId
-              )?.name
-            }{' '}
-            is being assassinated
-          </p>
-          {gameState.pendingAction?.targetId === playerId && (
-            <button
-              className='block-button'
-              onClick={() => handleBlock('Contessa')}
-              disabled={responseLocked}
-            >
-              Block with Contessa
-            </button>
-          )}
-          <button
-            className='pass-button'
-            onClick={handlePass}
-            disabled={responseLocked}
-          >
-            Pass
-          </button>
-        </div>
-      ) : canBlock && gameState.pendingAction?.type === 'captain' ? (
-        <div className='block-panel'>
-          <h3>Block Steal?</h3>
-          <p>
-            {
-              gameState.players.find(
-                (p) => p.id === gameState.pendingAction?.targetId
-              )?.name
-            }{' '}
-            is being stolen from
-          </p>
-          {gameState.pendingAction?.targetId === playerId && (
-            <>
+          <div className='my-hand'>
+            <h3>Your Cards</h3>
+            {isRevealContext && (
+              <p className='challenge-reveal-hint'>
+                You were challenged to show{' '}
+                <strong>{gameState.pendingAction?.challengedCharacter}</strong>.
+                Select a card to reveal.
+              </p>
+            )}
+            {isDiscardContext && (
+              <p className='challenge-reveal-hint'>
+                You are losing influence. Select a card to discard.
+              </p>
+            )}
+            <div className='cards-container'>
+              {myPlayer.cards.map((card, index) => (
+                <div key={index} className='card-wrapper'>
+                  <Card
+                    character={card.character}
+                    revealed={card.revealed}
+                    onClick={() => {
+                      if (needsCardChoice && !card.revealed) {
+                        setSelectedCard(index);
+                      }
+                    }}
+                    selected={selectedCard === index}
+                    disabled={!needsCardChoice || card.revealed}
+                  />
+                  <div className='card-title'>{card.character}</div>
+                </div>
+              ))}
+            </div>
+            {needsCardChoice && (
               <button
-                className='block-button'
-                onClick={() => handleBlock('Captain')}
-                disabled={responseLocked}
-              >
-                Block with Captain
-              </button>
-              <button
-                className='block-button'
-                onClick={() => handleBlock('Ambassador')}
-                disabled={responseLocked}
-              >
-                Block with Ambassador
-              </button>
-            </>
-          )}
-          <button
-            className='pass-button'
-            onClick={handlePass}
-            disabled={responseLocked}
-          >
-            Pass
-          </button>
-        </div>
-      ) : isMyTurn && gameState.phase === 'playing' ? (
-        <ActionPanel
-          player={myPlayer}
-          onAction={handleAction}
-          selectedTarget={selectedTarget}
-        />
-      ) : needsCardChoice ? (
-        <div className='card-choice-hint-panel'>
-          {isDiscardContext ? (
-            <p>You are losing influence. Select a card to discard.</p>
-          ) : (
-            <p>
-              You were challenged to show{' '}
-              <strong>{gameState.pendingAction?.challengedCharacter}</strong>.
-              Select a card to reveal.
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className='waiting-panel'>
-              <h3>Waiting for:</h3>
-              <p>
-                {(() => {
-                  // During challenge-pending phase (challengedPlayerId can be 0)
+                className='choose-card-button'
+                onClick={() => {
                   if (
-                    gameState.phase === 'challenge-pending' &&
-                    gameState.pendingAction &&
-                    challengedPlayerId != null
+                    selectedCard !== null &&
+                    myPlayer.cards[selectedCard] &&
+                    !myPlayer.cards[selectedCard].revealed
                   ) {
-                    // I'm the one who made the action (could be challenged) - waiting for others to pass or challenge
-                    if (challengedPlayerId === playerId) {
-                      return 'other players to pass or challenge';
-                    }
-                    // Challenged player needs to reveal their card - we're waiting for them
-                    if (gameState.pendingAction?.challengeStage === 'reveal') {
-                      const challengedPlayer = gameState.players.find(
-                        (p) => p.id === challengedPlayerId
-                      );
-                      return challengedPlayer
-                        ? `${challengedPlayer.name} to respond to challenge`
-                        : 'challenge response';
-                    }
-                    // I'm not eligible to challenge - waiting for others to pass or challenge
-                    if (!canChallenge) {
-                      return 'other players to pass or challenge';
-                    }
+                    handleCardChoice(selectedCard);
                   }
-                  if (
-                    gameState.phase === 'block-pending' &&
-                    gameState.pendingAction
-                  ) {
-                    const actionPlayer = gameState.players.find(
+                }}
+                disabled={
+                  selectedCard === null ||
+                  (selectedCard !== null &&
+                    myPlayer.cards[selectedCard]?.revealed)
+                }
+              >
+                {isRevealContext ? 'Reveal' : 'Discard'}
+              </button>
+            )}
+
+            {statusMessage && (
+              <div className={`status-banner ${statusKind}`}>
+                {statusMessage}
+              </div>
+            )}
+          </div>
+
+          {/* Action area: challenge, block, actions, or waiting */}
+          <div className='action-area'>
+            {canChallenge ? (
+              <div className='challenge-panel'>
+                <h3>
+                  Challenge {challengedPlayerName}
+                  {gameState.pendingAction?.blockerId != null
+                    ? "'s block?"
+                    : '?'}
+                </h3>
+                <p>
+                  They claimed to have: <strong>{challengedCharacter}</strong>
+                </p>
+                <button
+                  className='challenge-button'
+                  onClick={handleChallenge}
+                  disabled={responseLocked}
+                >
+                  Challenge
+                </button>
+                <button
+                  className='pass-button'
+                  onClick={handlePass}
+                  disabled={responseLocked}
+                >
+                  Pass
+                </button>
+              </div>
+            ) : canBlock && gameState.pendingAction?.type === 'foreign-aid' ? (
+              <div className='block-panel'>
+                <h3>Block Foreign Aid?</h3>
+                <p>
+                  {
+                    gameState.players.find(
                       (p) => p.id === gameState.pendingAction?.playerId
-                    );
-                    if (gameState.pendingAction.type === 'foreign-aid') {
-                      return actionPlayer
-                        ? `someone to block ${actionPlayer.name}'s Foreign Aid`
-                        : 'block response';
+                    )?.name
+                  }{' '}
+                  is taking Foreign Aid
+                </p>
+                <button
+                  className='block-button'
+                  onClick={() => handleBlock('Duke')}
+                  disabled={responseLocked}
+                >
+                  Block with Duke
+                </button>
+                <button
+                  className='pass-button'
+                  onClick={handlePass}
+                  disabled={responseLocked}
+                >
+                  Pass
+                </button>
+              </div>
+            ) : canBlock && gameState.pendingAction?.type === 'assassin' ? (
+              <div className='block-panel'>
+                <h3>Block Assassination?</h3>
+                <p>
+                  {
+                    gameState.players.find(
+                      (p) => p.id === gameState.pendingAction?.targetId
+                    )?.name
+                  }{' '}
+                  is being assassinated
+                </p>
+                {gameState.pendingAction?.targetId === playerId && (
+                  <button
+                    className='block-button'
+                    onClick={() => handleBlock('Contessa')}
+                    disabled={responseLocked}
+                  >
+                    Block with Contessa
+                  </button>
+                )}
+                <button
+                  className='pass-button'
+                  onClick={handlePass}
+                  disabled={responseLocked}
+                >
+                  Pass
+                </button>
+              </div>
+            ) : canBlock && gameState.pendingAction?.type === 'captain' ? (
+              <div className='block-panel'>
+                <h3>Block Steal?</h3>
+                <p>
+                  {
+                    gameState.players.find(
+                      (p) => p.id === gameState.pendingAction?.targetId
+                    )?.name
+                  }{' '}
+                  is being stolen from
+                </p>
+                {gameState.pendingAction?.targetId === playerId && (
+                  <>
+                    <button
+                      className='block-button'
+                      onClick={() => handleBlock('Captain')}
+                      disabled={responseLocked}
+                    >
+                      Block with Captain
+                    </button>
+                    <button
+                      className='block-button'
+                      onClick={() => handleBlock('Ambassador')}
+                      disabled={responseLocked}
+                    >
+                      Block with Ambassador
+                    </button>
+                  </>
+                )}
+                <button
+                  className='pass-button'
+                  onClick={handlePass}
+                  disabled={responseLocked}
+                >
+                  Pass
+                </button>
+              </div>
+            ) : isMyTurn && gameState.phase === 'playing' ? (
+              <ActionPanel
+                player={myPlayer}
+                onAction={handleAction}
+                selectedTarget={selectedTarget}
+              />
+            ) : needsCardChoice ? (
+              <div className='card-choice-hint-panel'>
+                {isDiscardContext ? (
+                  <p>You are losing influence. Select a card to discard.</p>
+                ) : (
+                  <p>
+                    You were challenged to show{' '}
+                    <strong>
+                      {gameState.pendingAction?.challengedCharacter}
+                    </strong>
+                    . Select a card to reveal.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className='waiting-panel'>
+                <h3>Waiting for:</h3>
+                <p>
+                  {(() => {
+                    // During challenge-pending phase (challengedPlayerId can be 0)
+                    if (
+                      gameState.phase === 'challenge-pending' &&
+                      gameState.pendingAction &&
+                      challengedPlayerId != null
+                    ) {
+                      // I'm the one who made the action (could be challenged) - waiting for others to pass or challenge
+                      if (challengedPlayerId === playerId) {
+                        return 'other players to pass or challenge';
+                      }
+                      // Challenged player needs to reveal their card - we're waiting for them
+                      if (
+                        gameState.pendingAction?.challengeStage === 'reveal'
+                      ) {
+                        const challengedPlayer = gameState.players.find(
+                          (p) => p.id === challengedPlayerId
+                        );
+                        return challengedPlayer
+                          ? `${challengedPlayer.name} to respond to challenge`
+                          : 'challenge response';
+                      }
+                      // I'm not eligible to challenge - waiting for others to pass or challenge
+                      if (!canChallenge) {
+                        return 'other players to pass or challenge';
+                      }
                     }
                     if (
-                      gameState.pendingAction.type === 'assassin' ||
-                      gameState.pendingAction.type === 'captain'
+                      gameState.phase === 'block-pending' &&
+                      gameState.pendingAction
                     ) {
-                      const targetPlayer = gameState.players.find(
-                        (p) => p.id === gameState.pendingAction?.targetId
+                      const actionPlayer = gameState.players.find(
+                        (p) => p.id === gameState.pendingAction?.playerId
                       );
-                      return targetPlayer
-                        ? `${targetPlayer.name} to block`
-                        : 'block response';
+                      if (gameState.pendingAction.type === 'foreign-aid') {
+                        return actionPlayer
+                          ? `someone to block ${actionPlayer.name}'s Foreign Aid`
+                          : 'block response';
+                      }
+                      if (
+                        gameState.pendingAction.type === 'assassin' ||
+                        gameState.pendingAction.type === 'captain'
+                      ) {
+                        const targetPlayer = gameState.players.find(
+                          (p) => p.id === gameState.pendingAction?.targetId
+                        );
+                        return targetPlayer
+                          ? `${targetPlayer.name} to block`
+                          : 'block response';
+                      }
                     }
-                  }
-                  if (
-                    gameState.phase === 'choose-card' &&
-                    gameState.pendingAction
-                  ) {
-                    const choosingPlayer = gameState.players.find(
-                      (p) => p.id === mustChooseCardPlayerId
-                    );
-                    const isReveal =
-                      gameState.pendingAction?.challengeStage === 'reveal';
-                    const action = isReveal ? 'reveal a card' : 'discard a card';
-                    return choosingPlayer
-                      ? `${choosingPlayer.name} to ${action}`
-                      : 'card choice';
-                  }
-                  if (gameState.phase === 'ambassador-exchange' && gameState.pendingAction) {
-                    const exchangingPlayer = gameState.players.find(
-                      (p) => p.id === gameState.pendingAction?.playerId
-                    );
-                    return exchangingPlayer
-                      ? `${exchangingPlayer.name} to complete their Ambassador exchange`
-                      : 'Ambassador exchange';
-                  }
-                  if (
-                    gameState.currentPlayerIndex !== null &&
-                    gameState.phase === 'playing'
-                  ) {
-                    const currentPlayer = gameState.players.find(
-                      (p) => p.id === gameState.currentPlayerIndex
-                    );
-                    return currentPlayer
-                      ? `${currentPlayer.name} to take their turn`
-                      : 'next turn';
-                  }
-                  return 'game to continue';
-                })()}
-              </p>
-            </div>
-      )}
-      </div>
+                    if (
+                      gameState.phase === 'choose-card' &&
+                      gameState.pendingAction
+                    ) {
+                      const choosingPlayer = gameState.players.find(
+                        (p) => p.id === mustChooseCardPlayerId
+                      );
+                      const isReveal =
+                        gameState.pendingAction?.challengeStage === 'reveal';
+                      const action = isReveal
+                        ? 'reveal a card'
+                        : 'discard a card';
+                      return choosingPlayer
+                        ? `${choosingPlayer.name} to ${action}`
+                        : 'card choice';
+                    }
+                    if (
+                      gameState.phase === 'ambassador-exchange' &&
+                      gameState.pendingAction
+                    ) {
+                      const exchangingPlayer = gameState.players.find(
+                        (p) => p.id === gameState.pendingAction?.playerId
+                      );
+                      return exchangingPlayer
+                        ? `${exchangingPlayer.name} to complete their Ambassador exchange`
+                        : 'Ambassador exchange';
+                    }
+                    if (
+                      gameState.currentPlayerIndex !== null &&
+                      gameState.phase === 'playing'
+                    ) {
+                      const currentPlayer = gameState.players.find(
+                        (p) => p.id === gameState.currentPlayerIndex
+                      );
+                      return currentPlayer
+                        ? `${currentPlayer.name} to take their turn`
+                        : 'next turn';
+                    }
+                    return 'game to continue';
+                  })()}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Dramatic card reveal modal - key forces fresh mount for each reveal */}
+      {revealModal && (
+        <RevealModal
+          key={revealModal.id}
+          reveal={revealModal}
+          onDismiss={() => setRevealModal(null)}
+        />
       )}
 
       {/* Ambassador Exchange Modal - rendered outside action-area */}

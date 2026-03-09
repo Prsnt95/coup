@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
 import io from 'socket.io-client';
-import Lobby from './components/Lobby';
-import GameBoard from './components/GameBoard';
-import VoiceChat from './components/VoiceChat';
+
 import './App.css';
+import GameBoard from './components/GameBoard';
+import Lobby from './components/Lobby';
+import VoiceChat from './components/VoiceChat';
 
 // In dev, backend is always on :3001. In production use VITE_SOCKET_URL (e.g. your Render backend).
 const socketUrl =
@@ -14,7 +16,7 @@ const socket = io(socketUrl, {
   reconnectionDelay: 50,
   reconnectionDelayMax: 200,
   reconnectionAttempts: 10,
-  timeout: 5000
+  timeout: 5000,
 });
 
 const STORAGE_KEYS = {
@@ -36,20 +38,27 @@ function App() {
     const savedRoomId = sessionStorage.getItem(STORAGE_KEYS.ROOM_ID);
     const savedPlayerIdStr = sessionStorage.getItem(STORAGE_KEYS.PLAYER_ID);
     const savedPlayerName = sessionStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
-    
+
     // Parse playerId safely, checking for NaN
-    const savedPlayerId = savedPlayerIdStr ? parseInt(savedPlayerIdStr, 10) : null;
+    const savedPlayerId = savedPlayerIdStr
+      ? parseInt(savedPlayerIdStr, 10)
+      : null;
     const isValidPlayerId = savedPlayerId !== null && !isNaN(savedPlayerId);
 
     if (savedRoomId && isValidPlayerId && savedPlayerName) {
       setRoomId(savedRoomId);
       setPlayerId(savedPlayerId);
       setPlayerName(savedPlayerName);
-      
+
       // Try to reconnect immediately if socket is already connected
       if (socket.connected) {
-        console.log('Socket already connected on mount, attempting immediate reconnect...');
-        socket.emit('reconnect-room', { roomId: savedRoomId, playerId: savedPlayerId });
+        console.log(
+          'Socket already connected on mount, attempting immediate reconnect...'
+        );
+        socket.emit('reconnect-room', {
+          roomId: savedRoomId,
+          playerId: savedPlayerId,
+        });
       }
     }
   }, []);
@@ -61,11 +70,18 @@ function App() {
       // Attempt to reconnect if we have saved game data
       const savedRoomId = sessionStorage.getItem(STORAGE_KEYS.ROOM_ID);
       const savedPlayerIdStr = sessionStorage.getItem(STORAGE_KEYS.PLAYER_ID);
-      const savedPlayerId = savedPlayerIdStr ? parseInt(savedPlayerIdStr, 10) : null;
-      
+      const savedPlayerId = savedPlayerIdStr
+        ? parseInt(savedPlayerIdStr, 10)
+        : null;
+
       if (savedRoomId && savedPlayerId !== null && !isNaN(savedPlayerId)) {
-        console.log(`Emitting reconnect-room: room=${savedRoomId}, player=${savedPlayerId}`);
-        socket.emit('reconnect-room', { roomId: savedRoomId, playerId: savedPlayerId });
+        console.log(
+          `Emitting reconnect-room: room=${savedRoomId}, player=${savedPlayerId}`
+        );
+        socket.emit('reconnect-room', {
+          roomId: savedRoomId,
+          playerId: savedPlayerId,
+        });
       }
     };
     const onDisconnect = () => {
@@ -75,20 +91,29 @@ function App() {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     setConnected(socket.connected);
-    
+
     // If already connected, try to reconnect immediately
     if (socket.connected) {
-      console.log('Socket already connected, attempting immediate reconnect...');
+      console.log(
+        'Socket already connected, attempting immediate reconnect...'
+      );
       const savedRoomId = sessionStorage.getItem(STORAGE_KEYS.ROOM_ID);
       const savedPlayerIdStr = sessionStorage.getItem(STORAGE_KEYS.PLAYER_ID);
-      const savedPlayerId = savedPlayerIdStr ? parseInt(savedPlayerIdStr, 10) : null;
-      
+      const savedPlayerId = savedPlayerIdStr
+        ? parseInt(savedPlayerIdStr, 10)
+        : null;
+
       if (savedRoomId && savedPlayerId !== null && !isNaN(savedPlayerId)) {
-        console.log(`Emitting reconnect-room (immediate): room=${savedRoomId}, player=${savedPlayerId}`);
-        socket.emit('reconnect-room', { roomId: savedRoomId, playerId: savedPlayerId });
+        console.log(
+          `Emitting reconnect-room (immediate): room=${savedRoomId}, player=${savedPlayerId}`
+        );
+        socket.emit('reconnect-room', {
+          roomId: savedRoomId,
+          playerId: savedPlayerId,
+        });
       }
     }
-    
+
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
@@ -137,7 +162,10 @@ function App() {
       setError(message);
       setTimeout(() => setError(null), 5000);
       // If reconnection failed, clear saved data
-      if (message.includes('not found') || message.includes('Player not found')) {
+      if (
+        message.includes('not found') ||
+        message.includes('Player not found')
+      ) {
         sessionStorage.removeItem(STORAGE_KEYS.ROOM_ID);
         sessionStorage.removeItem(STORAGE_KEYS.PLAYER_ID);
         sessionStorage.removeItem(STORAGE_KEYS.PLAYER_NAME);
@@ -171,21 +199,21 @@ function App() {
   };
 
   if (error) {
-    return (
-      <div className="error-banner">
-        {error}
-      </div>
-    );
+    return <div className='error-banner'>{error}</div>;
   }
 
   if (!connected) {
     return (
-      <div className="connection-banner">
+      <div className='connection-banner'>
         <h2>Connecting to game server…</h2>
         <p>
           If this doesn’t go away, the frontend can’t reach the backend.
           <br />
-          Using Vercel + Render? In Vercel set <strong>VITE_SOCKET_URL</strong> to your Render URL (e.g. <code>https://your-app.onrender.com</code>), then redeploy.
+          Using Vercel + Render? In Vercel set <strong>
+            VITE_SOCKET_URL
+          </strong>{' '}
+          to your Render URL (e.g. <code>https://your-app.onrender.com</code>),
+          then redeploy.
         </p>
       </div>
     );
@@ -217,7 +245,9 @@ function App() {
           roomId={roomId}
           playerId={playerId}
           players={gameState?.players || []}
-          enabled={!!(roomId && playerId != null && gameState?.players?.length > 0)}
+          enabled={
+            !!(roomId && playerId != null && gameState?.players?.length > 0)
+          }
         />
       </>
     );
@@ -238,7 +268,9 @@ function App() {
         roomId={roomId}
         playerId={playerId}
         players={gameState?.players || []}
-        enabled={!!(roomId && playerId != null && gameState?.players?.length > 0)}
+        enabled={
+          !!(roomId && playerId != null && gameState?.players?.length > 0)
+        }
       />
     </>
   );
