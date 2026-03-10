@@ -37,6 +37,11 @@ function VoiceChat({ socket, roomId, playerId, players, enabled }) {
 
   return (
     <div className='voice-chat'>
+      <div className='voice-chat-audio-sinks' aria-hidden>
+        {remoteList.map(([id, { stream }]) => (
+          <RemoteAudio key={`audio-${id}`} stream={stream} />
+        ))}
+      </div>
       {micError && (
         <div className='voice-chat-error' title={micError}>
           Camera/mic unavailable
@@ -152,6 +157,23 @@ function RemoteVideo({ stream, name }) {
       <span className='voice-chat-label'>{name}</span>
     </div>
   );
+}
+
+function RemoteAudio({ stream }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.srcObject = stream || null;
+    }
+    return () => {
+      if (ref.current) {
+        ref.current.srcObject = null;
+      }
+    };
+  }, [stream]);
+
+  return <audio ref={ref} autoPlay playsInline />;
 }
 
 export default VoiceChat;

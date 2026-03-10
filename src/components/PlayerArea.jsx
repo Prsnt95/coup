@@ -54,8 +54,14 @@ function PlayerArea({
       )}
 
       <div className={`player-coins ${isFiery ? 'fire-glow' : ''}`}>
-        <span className='coin-icon'>🪙</span>
         <span className='coin-count'>{player.coins}</span>
+        <div className='coin-icons' aria-label={`${player.coins} coins`}>
+          {Array.from({ length: player.coins }).map((_, index) => (
+            <span key={index} className='coin-icon'>
+              🪙
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className='player-cards'>

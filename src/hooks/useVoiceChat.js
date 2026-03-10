@@ -15,6 +15,15 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
   const peersRef = useRef(new Map()); // playerId -> { pc, videoEl }
   const pendingCandidatesRef = useRef(new Map());
   const initPromiseRef = useRef(null);
+  const reconnectTimersRef = useRef(new Map());
+
+  const clearReconnectTimer = useCallback((remotePlayerId) => {
+    const timer = reconnectTimersRef.current.get(remotePlayerId);
+    if (timer) {
+      clearTimeout(timer);
+      reconnectTimersRef.current.delete(remotePlayerId);
+    }
+  }, []);
 
   const getLocalStream = useCallback(
     async (includeAudio = false, includeVideo = false) => {
@@ -53,7 +62,14 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
             existing.addTrack(audioTrack);
             setLocalStream(new MediaStream(existing.getTracks()));
             for (const [remoteId, { pc }] of peersRef.current) {
-              pc.addTrack(audioTrack, existing);
+              const sender =
+                pc.getSenders().find((s) => s.track?.kind === 'audio') ||
+                pc.getSenders().find((s) => s.track == null);
+              if (sender) {
+                await sender.replaceTrack(audioTrack);
+              } else {
+                pc.addTrack(audioTrack, existing);
+              }
               const offer = await pc.createOffer();
               await pc.setLocalDescription(offer);
               socket?.emit('voice-offer', { targetPlayerId: remoteId, offer });
@@ -91,7 +107,14 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
             existing.addTrack(videoTrack);
             setLocalStream(new MediaStream(existing.getTracks()));
             for (const [remoteId, { pc }] of peersRef.current) {
-              pc.addTrack(videoTrack, existing);
+              const sender =
+                pc.getSenders().find((s) => s.track?.kind === 'video') ||
+                pc.getSenders().find((s) => s.track == null);
+              if (sender) {
+                await sender.replaceTrack(videoTrack);
+              } else {
+                pc.addTrack(videoTrack, existing);
+              }
               const offer = await pc.createOffer();
               await pc.setLocalDescription(offer);
               socket?.emit('voice-offer', { targetPlayerId: remoteId, offer });
@@ -183,12 +206,32 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
       };
 
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-          setRemoteStreams((prev) => {
-            const next = new Map(prev);
-            next.delete(remotePlayerId);
-            return next;
-          });
+        if (pc.connectionState === 'connected') {
+          clearReconnectTimer(remotePlayerId);
+          return;
+        }
+
+        if (
+          pc.connectionState === 'failed' ||
+          pc.connectionState === 'closed' ||
+          pc.connectionState === 'disconnected'
+        ) {
+          clearReconnectTimer(remotePlayerId);
+          const timer = setTimeout(() => {
+            const current = peersRef.current.get(remotePlayerId)?.pc;
+            if (current !== pc) return;
+            try {
+              pc.close();
+            } catch (_) {}
+            peersRef.current.delete(remotePlayerId);
+            pendingCandidatesRef.current.delete(remotePlayerId);
+            setRemoteStreams((prev) => {
+              const next = new Map(prev);
+              next.delete(remotePlayerId);
+              return next;
+            });
+          }, pc.connectionState === 'disconnected' ? 3000 : 0);
+          reconnectTimersRef.current.set(remotePlayerId, timer);
         }
       };
 
@@ -240,6 +283,7 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
   );
 
   const closePeer = useCallback((remotePlayerId) => {
+    clearReconnectTimer(remotePlayerId);
     const entry = peersRef.current.get(remotePlayerId);
     if (entry) {
       entry.pc.close();
@@ -251,7 +295,7 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
       return next;
     });
     pendingCandidatesRef.current.delete(remotePlayerId);
-  }, []);
+  }, [clearReconnectTimer]);
 
   const closeAllPeers = useCallback(() => {
     peersRef.current.forEach((_, id) => closePeer(id));
@@ -281,6 +325,31 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
       }
     }
   }, [enabled, socket, roomId, playerId, players, connectToPeer, closePeer, closeAllPeers]);
+
+  useEffect(() => {
+    if (!socket || !enabled || playerId == null) return;
+
+    const onSocketDisconnect = () => {
+      closeAllPeers();
+    };
+
+    const onSocketConnect = () => {
+      const others = players?.filter((p) => p.id !== playerId) || [];
+      others.forEach((p) => {
+        if (!peersRef.current.has(p.id) && playerId < p.id) {
+          connectToPeer(p.id, p.name ?? `Player ${p.id}`);
+        }
+      });
+    };
+
+    socket.on('disconnect', onSocketDisconnect);
+    socket.on('connect', onSocketConnect);
+
+    return () => {
+      socket.off('disconnect', onSocketDisconnect);
+      socket.off('connect', onSocketConnect);
+    };
+  }, [socket, enabled, playerId, players, connectToPeer, closeAllPeers]);
 
   useEffect(() => {
     if (!socket || !enabled) return;
@@ -392,6 +461,8 @@ export function useVoiceChat(socket, roomId, playerId, players, enabled) {
 
   const cleanup = useCallback(() => {
     closeAllPeers();
+    reconnectTimersRef.current.forEach((timer) => clearTimeout(timer));
+    reconnectTimersRef.current.clear();
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
